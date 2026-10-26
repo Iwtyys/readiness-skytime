@@ -219,7 +219,7 @@ public class MemScanner {
     }
 }
 '@ -ErrorAction SilentlyContinue
-        
+
         foreach ($proc in $javawProcesses) {
             # Получаем информацию о процессе
             $procInfo = Get-Process -Id $proc.Id -ErrorAction SilentlyContinue
