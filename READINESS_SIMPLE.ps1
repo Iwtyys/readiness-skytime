@@ -157,34 +157,79 @@ Clear-Host
 $windowWidth = $Host.UI.RawUI.WindowSize.Width
 if ($windowWidth -lt 80) { $windowWidth = 80 }
 
-Write-Host ""
-Write-Host ("=" * $windowWidth) -ForegroundColor White
-Write-Host "READINESS - Minecraft Cheat Detector" -ForegroundColor White
-Write-Host ("=" * $windowWidth) -ForegroundColor White
-Write-Host ""
-Write-Host "  [1] Scan javaw.exe memory" -ForegroundColor White
-Write-Host "  [2] Check java.exe JAR files" -ForegroundColor White
-Write-Host "  [3] Scan mods folder" -ForegroundColor White
-Write-Host "  [4] Check suspicious DLL" -ForegroundColor White
-Write-Host "  [5] SafeMode Detection" -ForegroundColor White
-Write-Host "  [6] Browser History Scanner" -ForegroundColor White
-Write-Host "  [0] Exit" -ForegroundColor Gray
-Write-Host ""
+# Функция для центрирования текста
+function Write-Centered {
+    param($text, $color = "White")
+    $padding = [math]::Max(0, (($windowWidth - $text.Length) / 2))
+    Write-Host (" " * $padding) -NoNewline
+    Write-Host $text -ForegroundColor $color
+}
+
+# Функция для отрисовки логотипа
+function Show-Logo {
+    Write-Host ""
+    Write-Host ""
+    Write-Centered "██████╗ ███████╗ █████╗ ██████╗ ██╗███╗   ██╗███████╗███████╗███████╗" -color DarkGray
+    Write-Centered "██╔══██╗██╔════╝██╔══██╗██╔══██╗██║████╗  ██║██╔════╝██╔════╝██╔════╝" -color DarkGray
+    Write-Centered "██████╔╝█████╗  ███████║██║  ██║██║██╔██╗ ██║█████╗  ███████╗███████╗" -color Gray
+    Write-Centered "██╔══██╗██╔══╝  ██╔══██║██║  ██║██║██║╚██╗██║██╔══╝  ╚════██║╚════██║" -color Gray
+    Write-Centered "██║  ██║███████╗██║  ██║██████╔╝██║██║ ╚████║███████╗███████║███████║" -color White
+    Write-Centered "╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═════╝ ╚═╝╚═╝  ╚═══╝╚══════╝╚══════╝╚══════╝" -color White
+    Write-Host ""
+    
+    $borderChar = "═"
+    $border = $borderChar * $windowWidth
+    Write-Host $border -ForegroundColor DarkGray
+    
+    $createdText = "Created by: IwTu"
+    $totalPadding = $windowWidth - $createdText.Length - 2
+    $leftSpace = [math]::Floor($totalPadding / 2)
+    $rightSpace = $totalPadding - $leftSpace
+    
+    Write-Host -NoNewline "║" -ForegroundColor Gray
+    Write-Host -NoNewline (" " * $leftSpace)
+    Write-Host -NoNewline $createdText -ForegroundColor Gray
+    Write-Host -NoNewline (" " * $rightSpace)
+    Write-Host "║" -ForegroundColor Gray
+    
+    Write-Host $border -ForegroundColor DarkGray
+    Write-Host ""
+}
+
+Show-Logo
 
 while ($true) {
+    Write-Host ""
+    Write-Host "Select scan mode:" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "  [1] Scan javaw.exe memory" -ForegroundColor White
+    Write-Host "  [2] Check java.exe JAR files" -ForegroundColor White
+    Write-Host "  [3] Scan mods folder" -ForegroundColor White
+    Write-Host "  [4] Check suspicious DLL" -ForegroundColor White
+    Write-Host "  [5] SafeMode Detection" -ForegroundColor White
+    Write-Host "  [6] Browser History Scanner" -ForegroundColor White
+    Write-Host ""
+    Write-Host "  [0] Exit" -ForegroundColor DarkGray
+    Write-Host ""
+
     $choice = Read-Host "Enter choice"
     
     if ($choice -eq "0") {
+        Write-Host ""
         Write-Host "Exiting..." -ForegroundColor Gray
         exit
     }
     
-    Write-Host "[*] Feature $choice coming soon!" -ForegroundColor Yellow
-    Read-Host "Press Enter to continue"
     Clear-Host
+    Show-Logo
     Write-Host ""
-    Write-Host ("=" * $windowWidth) -ForegroundColor White
-    Write-Host "READINESS - Minecraft Cheat Detector" -ForegroundColor White
-    Write-Host ("=" * $windowWidth) -ForegroundColor White
+    Write-Host "  ╔═══════════════════════════════════════════════════════════════════════════╗" -ForegroundColor Gray
+    Write-Host "  ║                    SCAN MODE $choice                                      ║" -ForegroundColor Gray
+    Write-Host "  ╚═══════════════════════════════════════════════════════════════════════════╝" -ForegroundColor Gray
     Write-Host ""
+    Write-Host "[*] Feature coming soon!" -ForegroundColor Yellow
+    Write-Host ""
+    Read-Host "Press Enter to return to menu"
+    Clear-Host
+    Show-Logo
 }
