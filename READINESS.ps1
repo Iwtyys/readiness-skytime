@@ -1,6 +1,75 @@
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
+# ============================================================================
+# READINESS MENU FUNCTION
+# ============================================================================
+
+function Show-ReadinessMenu {
+    Clear-Host
+    $windowWidth = $Host.UI.RawUI.WindowSize.Width
+    if ($windowWidth -lt 80) { $windowWidth = 80 }
+    
+    function Write-Centered {
+        param($text, $color = "White")
+        $padding = [math]::Max(0, (($windowWidth - $text.Length) / 2))
+        Write-Host (" " * $padding) -NoNewline
+        Write-Host $text -ForegroundColor $color
+    }
+    
+    Write-Host ""
+    Write-Centered "██████╗ ███████╗ █████╗ ██████╗ ██╗███╗   ██╗███████╗███████╗███████╗" -color White
+    Write-Centered "██╔══██╗██╔════╝██╔══██╗██╔══██╗██║████╗  ██║██╔════╝██╔════╝██╔════╝" -color Gray
+    Write-Centered "██████╔╝█████╗  ███████║██║  ██║██║██╔██╗ ██║█████╗  ███████╗███████╗" -color Gray
+    Write-Centered "██╔══██╗██╔══╝  ██╔══██║██║  ██║██║██║╚██╗██║██╔══╝  ╚════██║╚════██║" -color DarkGray
+    Write-Centered "██║  ██║███████╗██║  ██║██████╔╝██║██║ ╚████║███████╗███████║███████║" -color DarkGray
+    Write-Centered "╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═════╝ ╚═╝╚═╝  ╚═══╝╚══════╝╚══════╝╚══════╝" -color DarkGray
+    Write-Host ""
+    Write-Host "═" * $windowWidth -ForegroundColor DarkGray
+    
+    while ($true) {
+        Write-Host ""
+        Write-Host "Select scan mode:" -ForegroundColor Gray
+        Write-Host ""
+        Write-Host "  [1] Scan javaw.exe memory" -ForegroundColor White
+        Write-Host "  [2] Check java.exe JAR files" -ForegroundColor White
+        Write-Host "  [3] Scan mods folder" -ForegroundColor White
+        Write-Host "  [4] Check suspicious DLL" -ForegroundColor White
+        Write-Host "  [5] SafeMode Detection" -ForegroundColor White
+        Write-Host "  [6] Browser History Scanner" -ForegroundColor White
+        Write-Host ""
+        Write-Host "  [0] Exit" -ForegroundColor DarkGray
+        Write-Host ""
+        
+        $choice = Read-Host "Enter choice"
+        
+        if ($choice -eq "0") {
+            Write-Host ""
+            Write-Host "Exiting..." -ForegroundColor Gray
+            exit
+        }
+        
+        Write-Host ""
+        Write-Host "[*] Feature coming soon!" -ForegroundColor Yellow
+        Write-Host ""
+        Read-Host "Press Enter to return to menu"
+        Clear-Host
+        Write-Host ""
+        Write-Centered "██████╗ ███████╗ █████╗ ██████╗ ██╗███╗   ██╗███████╗███████╗███████╗" -color White
+        Write-Centered "██╔══██╗██╔════╝██╔══██╗██╔══██╗██║████╗  ██║██╔════╝██╔════╝██╔════╝" -color Gray
+        Write-Centered "██████╔╝█████╗  ███████║██║  ██║██║██╔██╗ ██║█████╗  ███████╗███████╗" -color Gray
+        Write-Centered "██╔══██╗██╔══╝  ██╔══██║██║  ██║██║██║╚██╗██║██╔══╝  ╚════██║╚════██║" -color DarkGray
+        Write-Centered "██║  ██║███████╗██║  ██║██████╔╝██║██║ ╚████║███████╗███████║███████║" -color DarkGray
+        Write-Centered "╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═════╝ ╚═╝╚═╝  ╚═══╝╚══════╝╚══════╝╚══════╝" -color DarkGray
+        Write-Host ""
+        Write-Host "═" * $windowWidth -ForegroundColor DarkGray
+    }
+}
+
+# ============================================================================
+# GUI SPLASH SCREEN
+# ============================================================================
+
 # Создаем форму
 $form = New-Object System.Windows.Forms.Form
 $form.Text = ""
@@ -194,11 +263,8 @@ $timer.Add_Tick({
             $timer.Stop()
             $form.Close()
             
-            # Запускаем основной скрипт skytime.ps1
-            $scriptDir = Split-Path -Parent $PSCommandPath
-            if ($scriptDir) {
-                Start-Process powershell -ArgumentList "-ExecutionPolicy Bypass -File `"$scriptDir\skytime.ps1`""
-            }
+            # После загрузки показываем меню
+            Show-ReadinessMenu
         }
     }
 })
