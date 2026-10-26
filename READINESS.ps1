@@ -195,7 +195,10 @@ $timer.Add_Tick({
             $form.Close()
             
             # Запускаем основной скрипт skytime.ps1
-            Start-Process powershell -ArgumentList "-ExecutionPolicy Bypass -File `"$scriptPath\skytime.ps1`""
+            $scriptDir = Split-Path -Parent $PSCommandPath
+            if ($scriptDir) {
+                Start-Process powershell -ArgumentList "-ExecutionPolicy Bypass -File `"$scriptDir\skytime.ps1`""
+            }
         }
     }
 })
