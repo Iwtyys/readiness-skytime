@@ -1,4 +1,6 @@
 @echo off
-chcp 65001 > nul
-powershell -ExecutionPolicy Bypass -File "%~dp0READINESS.ps1"
+REM READINESS - Minecraft Cheat Detector
+REM Simple launcher
+cd /d "%~dp0"
+powershell -ExecutionPolicy Bypass -NoProfile -File "READINESS_SIMPLE.ps1"
 pause
