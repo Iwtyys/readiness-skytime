@@ -158,9 +158,9 @@ $windowWidth = $Host.UI.RawUI.WindowSize.Width
 if ($windowWidth -lt 80) { $windowWidth = 80 }
 
 Write-Host ""
-Write-Host ("█" * $windowWidth) -ForegroundColor White
+Write-Host ("=" * $windowWidth) -ForegroundColor White
 Write-Host "READINESS - Minecraft Cheat Detector" -ForegroundColor White
-Write-Host ("█" * $windowWidth) -ForegroundColor White
+Write-Host ("=" * $windowWidth) -ForegroundColor White
 Write-Host ""
 Write-Host "  [1] Scan javaw.exe memory" -ForegroundColor White
 Write-Host "  [2] Check java.exe JAR files" -ForegroundColor White
@@ -183,8 +183,8 @@ while ($true) {
     Read-Host "Press Enter to continue"
     Clear-Host
     Write-Host ""
-    Write-Host ("█" * $windowWidth) -ForegroundColor White
+    Write-Host ("=" * $windowWidth) -ForegroundColor White
     Write-Host "READINESS - Minecraft Cheat Detector" -ForegroundColor White
-    Write-Host ("█" * $windowWidth) -ForegroundColor White
+    Write-Host ("=" * $windowWidth) -ForegroundColor White
     Write-Host ""
 }
