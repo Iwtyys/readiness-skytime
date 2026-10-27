@@ -204,7 +204,100 @@ $timer.Start()
 [void]$form.ShowDialog()
 
 # ============================================================================
-# ПОСЛЕ ЗАГРУЗКИ - ЗАПУСКАЕМ ОСНОВНОЕ МЕНЮ
+# ПЛАВНАЯ АНИМАЦИЯ ПЕРЕХОДА К ГЛАВНОМУ МЕНЮ
+# ============================================================================
+
+# Создаем промежуточное окно с логотипом
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+
+$transitionForm = New-Object System.Windows.Forms.Form
+$transitionForm.FormBorderStyle = "None"
+$transitionForm.BackColor = [System.Drawing.Color]::FromArgb(20, 20, 20)
+$transitionForm.StartPosition = "CenterScreen"
+$transitionForm.TopMost = $true
+$transitionForm.ShowInTaskbar = $false
+$transitionForm.Opacity = 0
+
+# Начинаем с маленького размера
+$transitionForm.Size = New-Object System.Drawing.Size(200, 100)
+
+# Логотип ASCII в окне
+$logoLabel = New-Object System.Windows.Forms.Label
+$logoLabel.AutoSize = $false
+$logoLabel.Size = New-Object System.Drawing.Size(700, 300)
+$logoLabel.Location = New-Object System.Drawing.Point(50, 100)
+$logoLabel.Font = New-Object System.Drawing.Font("Consolas", 10, [System.Drawing.FontStyle]::Bold)
+$logoLabel.ForeColor = [System.Drawing.Color]::FromArgb(100, 200, 255)
+$logoLabel.BackColor = [System.Drawing.Color]::Transparent
+$logoLabel.TextAlign = "MiddleCenter"
+$logoLabel.Text = @"
+██████╗ ███████╗ █████╗ ██████╗ ██╗███╗   ██╗███████╗███████╗███████╗
+██╔══██╗██╔════╝██╔══██╗██╔══██╗██║████╗  ██║██╔════╝██╔════╝██╔════╝
+██████╔╝█████╗  ███████║██║  ██║██║██╔██╗ ██║█████╗  ███████╗███████╗
+██╔══██╗██╔══╝  ██╔══██║██║  ██║██║██║╚██╗██║██╔══╝  ╚════██║╚════██║
+██║  ██║███████╗██║  ██║██████╔╝██║██║ ╚████║███████╗███████║███████║
+╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═════╝ ╚═╝╚═╝  ╚═══╝╚══════╝╚══════╝╚══════╝
+
+                    v1.7.4 beta by IwTu
+"@
+
+$transitionForm.Controls.Add($logoLabel)
+
+# Показываем окно
+$transitionForm.Show()
+
+# Анимация: плавное появление и расширение
+$targetWidth = 800
+$targetHeight = 500
+$targetOpacity = 1.0
+
+for ($i = 0; $i -le 20; $i++) {
+    $progress = $i / 20
+    
+    # Плавное расширение (easing)
+    $eased = 1 - [Math]::Pow(1 - $progress, 3)
+    
+    $newWidth = 200 + ($targetWidth - 200) * $eased
+    $newHeight = 100 + ($targetHeight - 100) * $eased
+    $newOpacity = $targetOpacity * $eased
+    
+    $transitionForm.Size = New-Object System.Drawing.Size([int]$newWidth, [int]$newHeight)
+    $transitionForm.Opacity = $newOpacity
+    
+    # Центрируем окно
+    $screen = [System.Windows.Forms.Screen]::PrimaryScreen.WorkingArea
+    $transitionForm.Location = New-Object System.Drawing.Point(
+        ($screen.Width - $newWidth) / 2,
+        ($screen.Height - $newHeight) / 2
+    )
+    
+    # Центрируем логотип
+    $logoLabel.Location = New-Object System.Drawing.Point(
+        ($newWidth - 700) / 2,
+        ($newHeight - 300) / 2
+    )
+    
+    [System.Windows.Forms.Application]::DoEvents()
+    Start-Sleep -Milliseconds 30
+}
+
+# Держим логотип 1 секунду
+Start-Sleep -Milliseconds 1000
+
+# Плавное исчезновение
+for ($i = 20; $i -ge 0; $i--) {
+    $progress = $i / 20
+    $transitionForm.Opacity = $progress
+    [System.Windows.Forms.Application]::DoEvents()
+    Start-Sleep -Milliseconds 25
+}
+
+$transitionForm.Close()
+$transitionForm.Dispose()
+
+# ============================================================================
+# ПОСЛЕ АНИМАЦИИ - ЗАПУСКАЕМ ОСНОВНОЕ МЕНЮ
 # ============================================================================
 
 Clear-Host
@@ -261,23 +354,151 @@ function Show-Logo {
     Write-Host ""
 }
 
+# ============================================================================
+# ГЛАВНОЕ GUI МЕНЮ
+# ============================================================================
+
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+
+$mainForm = New-Object System.Windows.Forms.Form
+$mainForm.Text = "READINESS v1.7.4 beta"
+$mainForm.Size = New-Object System.Drawing.Size(500, 550)
+$mainForm.StartPosition = "CenterScreen"
+$mainForm.FormBorderStyle = "FixedDialog"
+$mainForm.MaximizeBox = $false
+$mainForm.BackColor = [System.Drawing.Color]::FromArgb(30, 30, 30)
+$mainForm.ForeColor = [System.Drawing.Color]::White
+$mainForm.Opacity = 0
+
+# Заголовок
+$titleLabel = New-Object System.Windows.Forms.Label
+$titleLabel.Text = "READINESS v1.7.4 beta"
+$titleLabel.Font = New-Object System.Drawing.Font("Consolas", 16, [System.Drawing.FontStyle]::Bold)
+$titleLabel.ForeColor = [System.Drawing.Color]::FromArgb(100, 200, 255)
+$titleLabel.AutoSize = $false
+$titleLabel.Size = New-Object System.Drawing.Size(460, 40)
+$titleLabel.Location = New-Object System.Drawing.Point(20, 20)
+$titleLabel.TextAlign = "MiddleCenter"
+$mainForm.Controls.Add($titleLabel)
+
+# Подзаголовок
+$subtitleLabel = New-Object System.Windows.Forms.Label
+$subtitleLabel.Text = "Created by: IwTu"
+$subtitleLabel.Font = New-Object System.Drawing.Font("Consolas", 10)
+$subtitleLabel.ForeColor = [System.Drawing.Color]::Gray
+$subtitleLabel.AutoSize = $false
+$subtitleLabel.Size = New-Object System.Drawing.Size(460, 20)
+$subtitleLabel.Location = New-Object System.Drawing.Point(20, 60)
+$subtitleLabel.TextAlign = "MiddleCenter"
+$mainForm.Controls.Add($subtitleLabel)
+
+# Линия разделитель
+$separator = New-Object System.Windows.Forms.Label
+$separator.AutoSize = $false
+$separator.Size = New-Object System.Drawing.Size(460, 2)
+$separator.Location = New-Object System.Drawing.Point(20, 90)
+$separator.BorderStyle = "Fixed3D"
+$separator.BackColor = [System.Drawing.Color]::Gray
+$mainForm.Controls.Add($separator)
+
+# Функция создания кнопки
+function Create-MenuButton {
+    param($text, $y, $tag)
+    
+    $button = New-Object System.Windows.Forms.Button
+    $button.Text = $text
+    $button.Size = New-Object System.Drawing.Size(440, 45)
+    $button.Location = New-Object System.Drawing.Point(30, $y)
+    $button.Font = New-Object System.Drawing.Font("Consolas", 11)
+    $button.BackColor = [System.Drawing.Color]::FromArgb(50, 50, 50)
+    $button.ForeColor = [System.Drawing.Color]::White
+    $button.FlatStyle = "Flat"
+    $button.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(100, 100, 100)
+    $button.FlatAppearance.BorderSize = 1
+    $button.Tag = $tag
+    $button.Cursor = [System.Windows.Forms.Cursors]::Hand
+    
+    # Hover эффект
+    $button.Add_MouseEnter({
+        $this.BackColor = [System.Drawing.Color]::FromArgb(70, 70, 70)
+        $this.ForeColor = [System.Drawing.Color]::FromArgb(100, 200, 255)
+    })
+    $button.Add_MouseLeave({
+        $this.BackColor = [System.Drawing.Color]::FromArgb(50, 50, 50)
+        $this.ForeColor = [System.Drawing.Color]::White
+    })
+    
+    return $button
+}
+
+# Создаем кнопки меню
+$btn1 = Create-MenuButton "[1] Scan javaw.exe memory" 110 "1"
+$btn2 = Create-MenuButton "[2] Check java.exe JAR files" 165 "2"
+$btn3 = Create-MenuButton "[3] Scan mods folder" 220 "3"
+$btn4 = Create-MenuButton "[4] Check suspicious DLL" 275 "4"
+$btn5 = Create-MenuButton "[5] SafeMode Detection" 330 "5"
+$btn6 = Create-MenuButton "[6] Browser History Scanner" 385 "6"
+
+$mainForm.Controls.Add($btn1)
+$mainForm.Controls.Add($btn2)
+$mainForm.Controls.Add($btn3)
+$mainForm.Controls.Add($btn4)
+$mainForm.Controls.Add($btn5)
+$mainForm.Controls.Add($btn6)
+
+# Кнопка выхода
+$btnExit = New-Object System.Windows.Forms.Button
+$btnExit.Text = "Exit"
+$btnExit.Size = New-Object System.Drawing.Size(440, 40)
+$btnExit.Location = New-Object System.Drawing.Point(30, 450)
+$btnExit.Font = New-Object System.Drawing.Font("Consolas", 10)
+$btnExit.BackColor = [System.Drawing.Color]::FromArgb(60, 20, 20)
+$btnExit.ForeColor = [System.Drawing.Color]::White
+$btnExit.FlatStyle = "Flat"
+$btnExit.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(100, 50, 50)
+$btnExit.Cursor = [System.Windows.Forms.Cursors]::Hand
+$btnExit.Add_Click({ $mainForm.Close(); exit })
+$mainForm.Controls.Add($btnExit)
+
+# Обработчики кликов
+$global:selectedChoice = $null
+
+$btn1.Add_Click({ $global:selectedChoice = "1"; $mainForm.Close() })
+$btn2.Add_Click({ $global:selectedChoice = "2"; $mainForm.Close() })
+$btn3.Add_Click({ $global:selectedChoice = "3"; $mainForm.Close() })
+$btn4.Add_Click({ $global:selectedChoice = "4"; $mainForm.Close() })
+$btn5.Add_Click({ $global:selectedChoice = "5"; $mainForm.Close() })
+$btn6.Add_Click({ $global:selectedChoice = "6"; $mainForm.Close() })
+
+# Показываем форму с плавным появлением
+$mainForm.Show()
+
+for ($i = 0; $i -le 20; $i++) {
+    $mainForm.Opacity = $i / 20
+    [System.Windows.Forms.Application]::DoEvents()
+    Start-Sleep -Milliseconds 20
+}
+
+# Ждем выбора пользователя
+while ($mainForm.Visible) {
+    [System.Windows.Forms.Application]::DoEvents()
+    Start-Sleep -Milliseconds 50
+}
+
+$mainForm.Dispose()
+
+if ($global:selectedChoice -eq $null) {
+    exit
+}
+
+$choice = $global:selectedChoice
+
+# ============================================================================
+# ЗАПУСК ВЫБРАННОГО СКАНЕРА
+# ============================================================================
+
 Show-Logo
-
-while ($true) {
-    Write-Host ""
-    Write-Host "Select scan mode:" -ForegroundColor Gray
-    Write-Host ""
-    Write-Host "  [1] Scan javaw.exe memory" -ForegroundColor White
-    Write-Host "  [2] Check java.exe JAR files" -ForegroundColor White
-    Write-Host "  [3] Scan mods folder" -ForegroundColor White
-    Write-Host "  [4] Check suspicious DLL" -ForegroundColor White
-    Write-Host "  [5] SafeMode Detection" -ForegroundColor White
-    Write-Host "  [6] Browser History Scanner" -ForegroundColor White
-    Write-Host ""
-    Write-Host "  [0] Exit" -ForegroundColor DarkGray
-    Write-Host ""
-
-    $choice = Read-Host "Enter choice"
 
 if ($choice -eq "1") {
     Clear-Host
@@ -481,9 +702,8 @@ public class MemScanner {
         Write-Host "[!] Scan complete! Found $totalFound issue(s)." -ForegroundColor Red
     }
     Write-Host ""
-    Read-Host "Press Enter to return to menu"
-    Clear-Host
-    Show-Logo
+    Read-Host "Press Enter to exit"
+    exit
     
 } elseif ($choice -eq "2") {
     Clear-Host
@@ -672,9 +892,8 @@ public class MemScanner {
         Write-Host "[!] Scan complete! Found $totalFound suspicious JAR(s)." -ForegroundColor Red
     }
     Write-Host ""
-    Read-Host "Press Enter to return to menu"
-    Clear-Host
-    Show-Logo
+    Read-Host "Press Enter to exit"
+    exit
     
 } elseif ($choice -eq "3") {
     Clear-Host
@@ -1521,9 +1740,8 @@ public class MemScanner {
         Write-Host "[!] Scan complete! Found $totalFound suspicious DLL(s)." -ForegroundColor Red
     }
     Write-Host ""
-    Read-Host "Press Enter to return to menu"
-    Clear-Host
-    Show-Logo
+    Read-Host "Press Enter to exit"
+    exit
     
 } elseif ($choice -eq "5") {
     Clear-Host
@@ -1876,9 +2094,8 @@ public class MemScanner {
     Write-Host "  ─────────────────────────────────────────────────────────────────────────" -ForegroundColor Gray
     Write-Host ""
     
-    Read-Host "Press Enter to return to menu"
-    Clear-Host
-    Show-Logo
+    Read-Host "Press Enter to exit"
+    exit
     
 } elseif ($choice -eq "6") {
     Clear-Host
@@ -2135,21 +2352,8 @@ public class MemScanner {
     Write-Host "  ─────────────────────────────────────────────────────────────────────────" -ForegroundColor Gray
     Write-Host ""
     
-    Read-Host "Press Enter to return to menu"
-    Clear-Host
-    Show-Logo
-    
-} elseif ($choice -eq "0") {
+    Read-Host "Press Enter to exit"
     exit
-    
-} else {
-    Write-Host ""
-    Write-Host "Invalid choice!" -ForegroundColor Red
-    Start-Sleep -Seconds 1
-    Clear-Host
-    Show-Logo
-}
-
 }
 
 
