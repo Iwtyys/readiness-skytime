@@ -672,11 +672,64 @@ public class MemScanner {
     Clear-Host
     Show-Logo
     
-    Write-Host "[~] Searching for mods folders..." -ForegroundColor Gray
+    Write-Host "[~] Checking for running Minecraft..." -ForegroundColor Gray
     
     $modsFolders = @()
+    $activeModsPath = $null
     
-    # Common locations
+    # Сначала ищем активный Minecraft
+    $javawProcesses = Get-Process -Name javaw -ErrorAction SilentlyContinue
+    
+    if ($javawProcesses) {
+        foreach ($proc in $javawProcesses) {
+            try {
+                $memoryGB = [math]::Round($proc.WorkingSet64 / 1GB, 2)
+                if ($memoryGB -lt 1) { continue }
+                
+                $cmdLine = (Get-WmiObject Win32_Process -Filter "ProcessId = $($proc.Id)").CommandLine
+                
+                $modsPath = $null
+                
+                # Вариант 1: --gameDir в командной строке
+                if ($cmdLine -match '--gameDir\s+([^\s]+)') {
+                    $gameDir = $matches[1].Trim('"')
+                    
+                    $possiblePaths = @(
+                        (Join-Path $gameDir "mods"),
+                        (Join-Path $gameDir "overlay\mods")
+                    )
+                    
+                    foreach ($path in $possiblePaths) {
+                        if (Test-Path $path) {
+                            $modsPath = $path
+                            break
+                        }
+                    }
+                }
+                # Вариант 2: Прямой путь .minecraft
+                elseif ($cmdLine -match '([A-Za-z]:[^"]*\.minecraft[^"\\]*)') {
+                    $gameDir = $matches[1].Trim('"')
+                    $modsPath = Join-Path $gameDir "mods"
+                }
+                # Вариант 3: Стандартный путь
+                else {
+                    $defaultPath = Join-Path $env:APPDATA ".minecraft\mods"
+                    if (Test-Path $defaultPath) {
+                        $modsPath = $defaultPath
+                    }
+                }
+                
+                if ($modsPath -and (Test-Path $modsPath)) {
+                    $activeModsPath = $modsPath
+                    break
+                }
+            } catch { }
+        }
+    }
+    
+    # Теперь ищем все папки mods на ПК
+    Write-Host "[~] Searching for mods folders..." -ForegroundColor Gray
+    
     $searchPaths = @(
         (Join-Path $env:APPDATA '.minecraft\mods'),
         (Join-Path $env:APPDATA '.tlauncher\legacy\Minecraft\game\mods'),
@@ -688,7 +741,6 @@ public class MemScanner {
     foreach ($path in $searchPaths) {
         if (Test-Path $path) {
             if ((Get-Item $path).PSIsContainer) {
-                # Search for mods subfolders
                 $foundMods = Get-ChildItem -Path $path -Recurse -Directory -Filter "mods" -ErrorAction SilentlyContinue -Depth 3
                 foreach ($modFolder in $foundMods) {
                     if (-not ($modsFolders -contains $modFolder.FullName)) {
@@ -696,13 +748,17 @@ public class MemScanner {
                     }
                 }
                 
-                # Check if path itself contains .jar files
                 $jars = Get-ChildItem -Path $path -Filter "*.jar" -ErrorAction SilentlyContinue
                 if ($jars.Count -gt 0 -and -not ($modsFolders -contains $path)) {
                     $modsFolders += $path
                 }
             }
         }
+    }
+    
+    # Добавляем активную папку в начало списка (если не там)
+    if ($activeModsPath -and -not ($modsFolders -contains $activeModsPath)) {
+        $modsFolders = @($activeModsPath) + $modsFolders
     }
     
     if ($modsFolders.Count -eq 0) {
@@ -714,12 +770,27 @@ public class MemScanner {
         Show-Logo
     } else {
         Write-Host ""
+        
+        if ($activeModsPath) {
+            Write-Host "    [!] Active Minecraft detected!" -ForegroundColor Green
+            Write-Host ""
+        }
+        
         Write-Host "    Found $($modsFolders.Count) mods folder(s):" -ForegroundColor Green
         Write-Host ""
         
         for ($i = 0; $i -lt $modsFolders.Count; $i++) {
-            Write-Host "    [$($i+1)] " -ForegroundColor White -NoNewline
-            Write-Host $modsFolders[$i] -ForegroundColor Gray
+            $prefix = "    [$($i+1)] "
+            
+            # Помечаем активную папку
+            if ($activeModsPath -and $modsFolders[$i] -eq $activeModsPath) {
+                Write-Host $prefix -ForegroundColor Cyan -NoNewline
+                Write-Host "[ACTIVE] " -ForegroundColor Green -NoNewline
+                Write-Host $modsFolders[$i] -ForegroundColor White
+            } else {
+                Write-Host $prefix -ForegroundColor White -NoNewline
+                Write-Host $modsFolders[$i] -ForegroundColor Gray
+            }
         }
         
         Write-Host ""
