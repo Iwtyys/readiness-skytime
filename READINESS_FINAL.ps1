@@ -1,10 +1,10 @@
 ﻿Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
-# РџРѕР»СѓС‡Р°РµРј РїСѓС‚СЊ Рє С‚РµРєСѓС‰РµР№ РїР°РїРєРµ
+# Получаем путь к текущей папке
 $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
 
-# РЎРѕР·РґР°РµРј С„РѕСЂРјСѓ
+# Создаем форму
 $form = New-Object System.Windows.Forms.Form
 $form.Text = ""
 $form.Size = New-Object System.Drawing.Size(400, 300)
@@ -12,9 +12,9 @@ $form.StartPosition = "CenterScreen"
 $form.FormBorderStyle = "None"
 $form.BackColor = [System.Drawing.Color]::FromArgb(25, 25, 25)
 $form.TopMost = $true
-$form.Opacity = 0  # РќР°С‡РёРЅР°РµРј СЃ РїСЂРѕР·СЂР°С‡РЅРѕСЃС‚Рё РґР»СЏ fade-in СЌС„С„РµРєС‚Р°
+$form.Opacity = 0  # Начинаем с прозрачности для fade-in эффекта
 
-# РќРµР±РѕР»СЊС€РѕРµ Р·Р°РєСЂСѓРіР»РµРЅРёРµ СѓРіР»РѕРІ
+# Небольшое закругление углов
 $radius = 20
 $path = New-Object System.Drawing.Drawing2D.GraphicsPath
 $rect = New-Object System.Drawing.Rectangle(0, 0, 400, 300)
@@ -25,13 +25,13 @@ $path.AddArc($rect.X, $rect.Bottom - $radius * 2, $radius * 2, $radius * 2, 90, 
 $path.CloseFigure()
 $form.Region = New-Object System.Drawing.Region($path)
 
-# Panel РґР»СЏ РѕСЃРЅРѕРІРЅРѕРіРѕ С„РѕРЅР°
+# Panel для основного фона
 $mainPanel = New-Object System.Windows.Forms.Panel
 $mainPanel.Dock = "Fill"
 $mainPanel.BackColor = [System.Drawing.Color]::FromArgb(25, 25, 25)
 $form.Controls.Add($mainPanel)
 
-# Р”РѕР±Р°РІР»СЏРµРј РІРѕР·РјРѕР¶РЅРѕСЃС‚СЊ РїРµСЂРµС‚Р°СЃРєРёРІР°С‚СЊ РѕРєРЅРѕ
+# Добавляем возможность перетаскивать окно
 $script:isDragging = $false
 $script:dragStartPoint = New-Object System.Drawing.Point(0, 0)
 
@@ -60,9 +60,9 @@ $mainPanel.Add_MouseUp({
     }
 })
 
-# Label "READINESS" РѕСЃРЅРѕРІРЅРѕР№
+# Label "READINESS" основной
 $label = New-Object System.Windows.Forms.Label
-$label.Text = ""  # РќР°С‡РёРЅР°РµРј СЃ РїСѓСЃС‚РѕРіРѕ С‚РµРєСЃС‚Р°
+$label.Text = ""  # Начинаем с пустого текста
 $label.Font = New-Object System.Drawing.Font("Segoe UI", 28, ([System.Drawing.FontStyle]::Bold -bor [System.Drawing.FontStyle]::Italic))
 $label.ForeColor = [System.Drawing.Color]::White
 $label.BackColor = [System.Drawing.Color]::Transparent
@@ -71,7 +71,7 @@ $label.Size = New-Object System.Drawing.Size(380, 60)
 $label.Location = New-Object System.Drawing.Point(10, 90)
 $label.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
 
-# Р”РѕР±Р°РІР»СЏРµРј РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёРµ Рё РґР»СЏ label
+# Добавляем перетаскивание и для label
 $label.Add_MouseDown({
     param($sender, $e)
     if ($e.Button -eq [System.Windows.Forms.MouseButtons]::Left) {
@@ -100,24 +100,24 @@ $label.Add_MouseUp({
 
 $mainPanel.Controls.Add($label)
 
-# Panel РґР»СЏ РєР°СЃС‚РѕРјРЅРѕР№ РїРѕР»РѕСЃРєРё Р·Р°РіСЂСѓР·РєРё
+# Panel для кастомной полоски загрузки
 $progressPanel = New-Object System.Windows.Forms.Panel
 $progressPanel.Location = New-Object System.Drawing.Point(50, 200)
 $progressPanel.Size = New-Object System.Drawing.Size(300, 8)
 $progressPanel.BackColor = [System.Drawing.Color]::Transparent
 
-# Р’РєР»СЋС‡Р°РµРј РґРІРѕР№РЅСѓСЋ Р±СѓС„РµСЂРёР·Р°С†РёСЋ РґР»СЏ СѓСЃС‚СЂР°РЅРµРЅРёСЏ РјРµСЂС†Р°РЅРёСЏ
+# Включаем двойную буферизацию для устранения мерцания
 $progressPanel.GetType().GetProperty("DoubleBuffered", [System.Reflection.BindingFlags]::Instance -bor [System.Reflection.BindingFlags]::NonPublic).SetValue($progressPanel, $true, $null)
 
 $mainPanel.Controls.Add($progressPanel)
 
-# РћР±СЂР°Р±РѕС‚С‡РёРє РѕС‚СЂРёСЃРѕРІРєРё РїСЂРѕРіСЂРµСЃСЃ-Р±Р°СЂР°
+# Обработчик отрисовки прогресс-бара
 $progressPanel.Add_Paint({
     param($sender, $e)
     $g = $e.Graphics
     $g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
     
-    # Р РёСЃСѓРµРј Р±РµР»СѓСЋ РїРѕР»РѕСЃРєСѓ
+    # Рисуем белую полоску
     $fillWidth = ($progressPanel.Width * $script:progress) / 100
     if ($fillWidth -gt 0) {
         $brush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::White)
@@ -126,7 +126,7 @@ $progressPanel.Add_Paint({
     }
 })
 
-# Label РґР»СЏ РїСЂРѕС†РµРЅС‚Р° Р·Р°РіСЂСѓР·РєРё (РїРѕРґ РїРѕР»РѕСЃРєРѕР№)
+# Label для процента загрузки (под полоской)
 $percentLabel = New-Object System.Windows.Forms.Label
 $percentLabel.Text = "0%"
 $percentLabel.Font = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Regular)
@@ -138,7 +138,7 @@ $percentLabel.Location = New-Object System.Drawing.Point(10, 220)
 $percentLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
 $mainPanel.Controls.Add($percentLabel)
 
-# РџРµСЂРµРјРµРЅРЅС‹Рµ РґР»СЏ Р°РЅРёРјР°С†РёРё
+# Переменные для анимации
 $script:progress = 0
 $script:textAlpha = 255
 $script:textDirection = -1
@@ -146,17 +146,17 @@ $script:closingAnimation = $false
 $script:textRevealIndex = 0
 $script:fullText = "READINESS"
 
-# Timer РґР»СЏ fade-in СЌС„С„РµРєС‚Р° Рё РїСЂРѕРіСЂРµСЃСЃ-Р±Р°СЂР°
+# Timer для fade-in эффекта и прогресс-бара
 $timer = New-Object System.Windows.Forms.Timer
-$timer.Interval = 20  # Р‘С‹СЃС‚СЂРµРµ РѕР±РЅРѕРІР»РµРЅРёРµ РґР»СЏ РїР»Р°РІРЅРѕСЃС‚Рё
+$timer.Interval = 20  # Быстрее обновление для плавности
 $timer.Add_Tick({
-    # Fade-in СЌС„С„РµРєС‚
+    # Fade-in эффект
     if ($form.Opacity -lt 1 -and -not $script:closingAnimation) {
         $form.Opacity += 0.05
         if ($form.Opacity -gt 1) { $form.Opacity = 1 }
     }
     
-    # РђРЅРёРјР°С†РёСЏ РїРѕСЏРІР»РµРЅРёСЏ С‚РµРєСЃС‚Р° РїРѕ Р±СѓРєРІР°Рј
+    # Анимация появления текста по буквам
     if ($script:textRevealIndex -lt $script:fullText.Length) {
         $script:textRevealIndex += 0.15
         $currentLength = [math]::Floor($script:textRevealIndex)
@@ -166,7 +166,7 @@ $timer.Add_Tick({
         $label.Text = $script:fullText.Substring(0, $currentLength)
     }
     
-    # РџСѓР»СЊСЃР°С†РёСЏ С‚РµРєСЃС‚Р° (РЅР°С‡РёРЅР°РµС‚СЃСЏ РїРѕСЃР»Рµ РїРѕР»РЅРѕРіРѕ РїРѕСЏРІР»РµРЅРёСЏ)
+    # Пульсация текста (начинается после полного появления)
     if ($script:textRevealIndex -ge $script:fullText.Length) {
         $script:textAlpha += ($script:textDirection * 3)
         if ($script:textAlpha -le 200) {
@@ -179,14 +179,14 @@ $timer.Add_Tick({
         $label.ForeColor = [System.Drawing.Color]::FromArgb($script:textAlpha, 255, 255, 255)
     }
     
-    # РћР±РЅРѕРІР»РµРЅРёРµ РїСЂРѕРіСЂРµСЃСЃ-Р±Р°СЂР°
+    # Обновление прогресс-бара
     if ($script:progress -lt 100) {
-        $script:progress += 0.8  # РњРµРЅСЊС€РёР№ С€Р°Рі РґР»СЏ РїР»Р°РІРЅРѕСЃС‚Рё
+        $script:progress += 0.8  # Меньший шаг для плавности
         if ($script:progress -gt 100) { $script:progress = 100 }
         $progressPanel.Invalidate()
         $percentLabel.Text = [math]::Round($script:progress).ToString() + "%"
     } else {
-        # Fade-out Р°РЅРёРјР°С†РёСЏ РїСЂРё Р·Р°РєСЂС‹С‚РёРё
+        # Fade-out анимация при закрытии
         if (-not $script:closingAnimation) {
             $script:closingAnimation = $true
         }
@@ -200,14 +200,14 @@ $timer.Add_Tick({
     }
 })
 
-# Р—Р°РїСѓСЃРєР°РµРј С‚Р°Р№РјРµСЂ
+# Запускаем таймер
 $timer.Start()
 
-# РџРѕРєР°Р·С‹РІР°РµРј С„РѕСЂРјСѓ
+# Показываем форму
 [void]$form.ShowDialog()
 
 # ============================================================================
-# РџРћРЎР›Р• Р—РђР“Р РЈР—РљР - Р—РђРџРЈРЎРљРђР•Рњ РћРЎРќРћР’РќРћР• РњР•РќР®
+# ПОСЛЕ ЗАГРУЗКИ - ЗАПУСКАЕМ ОСНОВНОЕ МЕНЮ
 # ============================================================================
 
 Clear-Host
@@ -466,6 +466,153 @@ public class MemScanner {
         Write-Host "    No javaw.exe processes running" -ForegroundColor Gray
     }
     
+    # Проверка на SafeMode - двухуровневая детекция
+    Write-Host ""
+    Write-Host "  [~] Checking for SafeMode pattern..." -ForegroundColor Gray
+    
+    $currentTime = Get-Date
+    $recentlyClosedJavaw = @()
+    $anydeskStarted = $null
+    $safemodeDetected = $false
+    $safemode100Confirmed = $false
+    
+    # Проверяем: должно быть минимум 1 javaw запущен сейчас
+    $currentJavawCount = 0
+    
+    if ($javawProcesses) {
+        $currentJavawCount = ($javawProcesses | Where-Object { 
+            $memGB = [math]::Round($_.WorkingSet64 / 1GB, 2)
+            $memGB -ge 1
+        }).Count
+    }
+    
+    if ($currentJavawCount -ge 1) {
+        try {
+            # Проверяем закрытые javaw (ищем последние 2 процесса за 15 минут)
+            $endEvents = Get-WinEvent -FilterHashtable @{LogName='Security'; Id=4689} -MaxEvents 200 -ErrorAction SilentlyContinue | 
+                Where-Object { $_.Message -match 'javaw\.exe' }
+            
+            foreach ($event in $endEvents) {
+                $timeClosed = $event.TimeCreated
+                $minutesAgo = ($currentTime - $timeClosed).TotalMinutes
+                
+                # Ищем только последние 15 минут
+                if ($minutesAgo -le 15 -and $recentlyClosedJavaw.Count -lt 2) {
+                    $recentlyClosedJavaw += @{
+                        Time = $timeClosed
+                        MinutesAgo = [math]::Round($minutesAgo, 1)
+                    }
+                }
+            }
+            
+            # Проверяем запущенные javaw - ищем "старый" процесс (≥15 минут)
+            $oldJavaw = $null
+            $newJavaw = $null
+            
+            foreach ($proc in $javawProcesses) {
+                $memGB = [math]::Round($proc.WorkingSet64 / 1GB, 2)
+                if ($memGB -lt 1) { continue }
+                
+                $runtimeMinutes = ((Get-Date) - $proc.StartTime).TotalMinutes
+                
+                if ($runtimeMinutes -ge 15) {
+                    $oldJavaw = $proc
+                } elseif ($runtimeMinutes -lt 15) {
+                    $newJavaw = $proc
+                }
+            }
+            
+            # Базовая детекция: javaw открыт + найдено минимум 1 закрытый процесс за последние 15 минут
+            if ($recentlyClosedJavaw.Count -ge 1) {
+                $safemodeDetected = $true
+            }
+            
+            # Проверяем запуск AnyDesk (последние 10 минут)
+            $anydeskEvents = Get-WinEvent -FilterHashtable @{LogName='Security'; Id=4688} -MaxEvents 500 -ErrorAction SilentlyContinue | 
+                Where-Object { $_.Message -match 'AnyDesk\.exe' }
+            
+            foreach ($event in $anydeskEvents) {
+                $timeStarted = $event.TimeCreated
+                $minutesAgo = ($currentTime - $timeStarted).TotalMinutes
+                
+                if ($minutesAgo -le 10) {
+                    $anydeskStarted = @{
+                        Time = $timeStarted
+                        MinutesAgo = [math]::Round($minutesAgo, 1)
+                    }
+                    break
+                }
+            }
+            
+            # 100% ТОЧНАЯ ПРОВЕРКА SAFEMODE:
+            # 1. Есть "старый" javaw (≥15 минут) ИЛИ есть "новый" javaw (<15 минут)
+            # 2. javaw закрыта в последние 5 минут
+            # 3. AnyDesk запущен в последние 5 минут
+            # 4. Разница между закрытием javaw и запуском AnyDesk < 5 минут
+            if ($recentlyClosedJavaw.Count -gt 0 -and $anydeskStarted) {
+                $closedJavaw = $recentlyClosedJavaw[0]
+                
+                # Проверяем что есть javaw (старый ≥15 мин ИЛИ новый <15 мин)
+                if (($oldJavaw -or $newJavaw) -and $closedJavaw.MinutesAgo -le 5 -and $anydeskStarted.MinutesAgo -le 5) {
+                    $timeDiff = [math]::Abs(($closedJavaw.Time - $anydeskStarted.Time).TotalMinutes)
+                    
+                    if ($timeDiff -le 5) {
+                        $safemode100Confirmed = $true
+                    }
+                }
+            }
+            
+        } catch {
+            # Если не удалось получить события
+        }
+        
+        if ($safemode100Confirmed) {
+            # 100% ПОДТВЕРЖДЕНИЕ SAFEMODE (БЕЗ ТАЙМЕРА)
+            Write-Host ""
+            Write-Host "  ╔═════════════════════════════════════════════════════════════════════════╗" -ForegroundColor Red
+            Write-Host "  ║              🚨 SAFEMODE 100% CONFIRMED! 🚨                            ║" -ForegroundColor Red
+            Write-Host "  ╚═════════════════════════════════════════════════════════════════════════╝" -ForegroundColor Red
+            Write-Host ""
+            Write-Host "  [!!!] Detected SafeMode pattern with AnyDesk:" -ForegroundColor Red
+            Write-Host ""
+            Write-Host "    • Current javaw.exe running: $currentJavawCount process(es)" -ForegroundColor White
+            Write-Host "    • javaw.exe was recently closed" -ForegroundColor Yellow
+            Write-Host "    • AnyDesk.exe was recently started" -ForegroundColor Yellow
+            Write-Host ""
+            Write-Host "  ⚠️  This is DEFINITIVE proof of SafeMode cheat usage!" -ForegroundColor Red
+            $totalFound++
+            
+        } elseif ($safemodeDetected) {
+            # БАЗОВАЯ ДЕТЕКЦИЯ SAFEMODE (С ТАЙМЕРОМ)
+            Write-Host ""
+            Write-Host "  ╔═════════════════════════════════════════════════════════════════════════╗" -ForegroundColor Yellow
+            Write-Host "  ║                    ⚠️  SAFEMODE DETECTED ⚠️                            ║" -ForegroundColor Yellow
+            Write-Host "  ╚═════════════════════════════════════════════════════════════════════════╝" -ForegroundColor Yellow
+            Write-Host ""
+            Write-Host "  [!] Suspicious pattern detected:" -ForegroundColor Yellow
+            Write-Host ""
+            Write-Host "    • Current javaw.exe running: $currentJavawCount process(es)" -ForegroundColor White
+            Write-Host "    • Recently closed javaw.exe:" -ForegroundColor Gray
+            
+            foreach ($closed in $recentlyClosedJavaw) {
+                Write-Host "      - Closed $($closed.MinutesAgo) min ago at $($closed.Time.ToString('HH:mm:ss'))" -ForegroundColor Gray
+            }
+            
+            Write-Host ""
+            Write-Host "  This pattern may indicate SafeMode usage" -ForegroundColor Yellow
+            
+            if ($anydeskStarted) {
+                Write-Host "  Note: AnyDesk is running but timing doesn't match 100% pattern" -ForegroundColor Gray
+            }
+            
+            $totalFound++
+            
+        } else {
+            Write-Host "    No suspicious activity detected" -ForegroundColor Green
+        }
+    } else {
+        Write-Host "    No javaw.exe with sufficient memory (≥1GB) running" -ForegroundColor Gray
+    }
     
     Write-Host ""
     if ($totalFound -eq 0) {
@@ -673,64 +820,11 @@ public class MemScanner {
     Clear-Host
     Show-Logo
     
-    Write-Host "[~] Checking for running Minecraft..." -ForegroundColor Gray
-    
-    $modsFolders = @()
-    $activeModsPath = $null
-    
-    # Сначала ищем активный Minecraft
-    $javawProcesses = Get-Process -Name javaw -ErrorAction SilentlyContinue
-    
-    if ($javawProcesses) {
-        foreach ($proc in $javawProcesses) {
-            try {
-                $memoryGB = [math]::Round($proc.WorkingSet64 / 1GB, 2)
-                if ($memoryGB -lt 1) { continue }
-                
-                $cmdLine = (Get-WmiObject Win32_Process -Filter "ProcessId = $($proc.Id)").CommandLine
-                
-                $modsPath = $null
-                
-                # Вариант 1: --gameDir в командной строке
-                if ($cmdLine -match '--gameDir\s+([^\s]+)') {
-                    $gameDir = $matches[1].Trim('"')
-                    
-                    $possiblePaths = @(
-                        (Join-Path $gameDir "mods"),
-                        (Join-Path $gameDir "overlay\mods")
-                    )
-                    
-                    foreach ($path in $possiblePaths) {
-                        if (Test-Path $path) {
-                            $modsPath = $path
-                            break
-                        }
-                    }
-                }
-                # Вариант 2: Прямой путь .minecraft
-                elseif ($cmdLine -match '([A-Za-z]:[^"]*\.minecraft[^"\\]*)') {
-                    $gameDir = $matches[1].Trim('"')
-                    $modsPath = Join-Path $gameDir "mods"
-                }
-                # Вариант 3: Стандартный путь
-                else {
-                    $defaultPath = Join-Path $env:APPDATA ".minecraft\mods"
-                    if (Test-Path $defaultPath) {
-                        $modsPath = $defaultPath
-                    }
-                }
-                
-                if ($modsPath -and (Test-Path $modsPath)) {
-                    $activeModsPath = $modsPath
-                    break
-                }
-            } catch { }
-        }
-    }
-    
-    # Теперь ищем все папки mods на ПК
     Write-Host "[~] Searching for mods folders..." -ForegroundColor Gray
     
+    $modsFolders = @()
+    
+    # Common locations
     $searchPaths = @(
         (Join-Path $env:APPDATA '.minecraft\mods'),
         (Join-Path $env:APPDATA '.tlauncher\legacy\Minecraft\game\mods'),
@@ -742,6 +836,7 @@ public class MemScanner {
     foreach ($path in $searchPaths) {
         if (Test-Path $path) {
             if ((Get-Item $path).PSIsContainer) {
+                # Search for mods subfolders
                 $foundMods = Get-ChildItem -Path $path -Recurse -Directory -Filter "mods" -ErrorAction SilentlyContinue -Depth 3
                 foreach ($modFolder in $foundMods) {
                     if (-not ($modsFolders -contains $modFolder.FullName)) {
@@ -749,17 +844,13 @@ public class MemScanner {
                     }
                 }
                 
+                # Check if path itself contains .jar files
                 $jars = Get-ChildItem -Path $path -Filter "*.jar" -ErrorAction SilentlyContinue
                 if ($jars.Count -gt 0 -and -not ($modsFolders -contains $path)) {
                     $modsFolders += $path
                 }
             }
         }
-    }
-    
-    # Добавляем активную папку в начало списка (если не там)
-    if ($activeModsPath -and -not ($modsFolders -contains $activeModsPath)) {
-        $modsFolders = @($activeModsPath) + $modsFolders
     }
     
     if ($modsFolders.Count -eq 0) {
@@ -771,27 +862,12 @@ public class MemScanner {
         Show-Logo
     } else {
         Write-Host ""
-        
-        if ($activeModsPath) {
-            Write-Host "    [!] Active Minecraft detected!" -ForegroundColor Green
-            Write-Host ""
-        }
-        
         Write-Host "    Found $($modsFolders.Count) mods folder(s):" -ForegroundColor Green
         Write-Host ""
         
         for ($i = 0; $i -lt $modsFolders.Count; $i++) {
-            $prefix = "    [$($i+1)] "
-            
-            # Помечаем активную папку
-            if ($activeModsPath -and $modsFolders[$i] -eq $activeModsPath) {
-                Write-Host $prefix -ForegroundColor Cyan -NoNewline
-                Write-Host "[ACTIVE] " -ForegroundColor Green -NoNewline
-                Write-Host $modsFolders[$i] -ForegroundColor White
-            } else {
-                Write-Host $prefix -ForegroundColor White -NoNewline
-                Write-Host $modsFolders[$i] -ForegroundColor Gray
-            }
+            Write-Host "    [$($i+1)] " -ForegroundColor White -NoNewline
+            Write-Host $modsFolders[$i] -ForegroundColor Gray
         }
         
         Write-Host ""
@@ -876,7 +952,7 @@ public class MemScanner {
                     'TopkaAutoBuy','XorekAutoBuy','TopkaAutoSell','XorekAutoMyst',
                     'TopkaCasino','AutoSell','AutoCasino','DiamondGen','AutoAttack',
                     'CleanCut','InventoryControlTweaks','AutoLeave','Foodslot',
-                    'Quickstack','AutoTool','FeatherLauncher','Badlion',
+                    'Quickstack','ItemSwap','AutoTool','FeatherLauncher','Badlion',
                     'FeverVisuals','WaveVisuals','ClientCommands','Schematica',
                     'Litematica','CheatUtils','FreeCam','WorldEdit','EffortlessBuilding',
                     'Pojav','FCL','MobileEmulator'
@@ -912,7 +988,7 @@ public class MemScanner {
                     'Baritone','Fabaritone','AutoMining','AutoFish',
                     'TopkaAutoBuy','TopkaAutoSell','XorekAutoMyst','AutoCasino',
                     'DiamondGen',
-                    'AutoAttack','CleanCut','InventoryControlTweaks','AutoLeave','Foodslot','AutoTool',
+                    'AutoAttack','CleanCut','InventoryControlTweaks','AutoLeave','Foodslot','ItemSwap','AutoTool',
                     'FeatherLauncher','Badlion','FeverVisuals','WaveVisuals',
                     'ClientCommands','Schematica','Litematica','CheatUtils','FreeCam','WorldEdit','EffortlessBuilding',
                     'Pojav','FCL','MobileEmulator'
@@ -1220,7 +1296,7 @@ public class MemScanner {
                     'Location' = @('AdvancedCompass')
                     'AutoMining' = @('Baritone','Fabaritone','AutoMining','AutoFish')
                     'AutoServer' = @('TopkaAutoBuy','XorekAutoBuy','TopkaAutoSell','XorekAutoMyst','TopkaCasino','AutoSell','AutoCasino')
-                    'PvP' = @('AutoAttack','CleanCut','InventoryControlTweaks','AutoLeave','Foodslot','Quickstack','AutoTool')
+                    'PvP' = @('AutoAttack','CleanCut','InventoryControlTweaks','AutoLeave','Foodslot','Quickstack','ItemSwap','AutoTool')
                     'Visual' = @('FeatherLauncher','BadlionClient','FeverVisuals','WaveVisuals')
                     'Cheat' = @('ClientCommands','Schematica','Litematica','CheatUtils','FreeCam','WorldEdit','EffortlessBuilding')
                     'Mobile' = @('Pojav','FCL','MobileEmulator')
@@ -2067,6 +2143,9 @@ public class MemScanner {
     
     # Показываем результаты
     if ($foundUrls.Count -gt 0) {
+        Write-Host "  ╔═════════════════════════════════════════════════════════════════════════╗" -ForegroundColor Red
+        Write-Host "  ║                     🚨 SUSPICIOUS SITES DETECTED! 🚨                   ║" -ForegroundColor Red
+        Write-Host "  ╚═════════════════════════════════════════════════════════════════════════╝" -ForegroundColor Red
         Write-Host ""
         
         $sortedUrls = $foundUrls.GetEnumerator() | Sort-Object -Property {$_.Value.Count} -Descending
@@ -2111,7 +2190,6 @@ public class MemScanner {
 }
 
 }
-
 
 
 
