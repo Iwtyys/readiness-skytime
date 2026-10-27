@@ -864,10 +864,10 @@ public class MemScanner {
                     'Killaura','AutoClicker','AutoPot','ShieldBreaker','FakeLag',
                     'AutoDoubleHand','WalksyOptimizer','Donut','AutoWeb','MaceSwap',
                     'Liminar','LiminarClient','LiminarLoader','LiminarGhost',
-                    'BlockESP','ElytraSwap','FastExp','FastXP','NoSlow','WallHack',
-                    'ChestStealer','AutoSprint','AntiAFK','NoJumpDelay',
+                    'BlockESP','ElytraSwap','FastXP','NoSlow','WallHack',
+                    'ChestStealer','AntiAFK','NoJumpDelay',
                     'ReplayMod','FlashBack','XRay','XRayMod','MobHealthBar',
-                    'HealthBarPlus','Neat','Minimap','Voxelmap','Waypoints',
+                    'HealthBarPlus','Neat','Minimap','Voxelmap',
                     'JourneyMap','AccurateBlockPlacement','ChunkAnimator',
                     'InventoryTotem','TrueSight','ElytraAutoPilot','BetterPvP',
                     'InvMove','ChestTracker','UseTracker','AucHelper','AntiInvis',
@@ -894,8 +894,8 @@ public class MemScanner {
                     'Doomsday','doomsdayclient',
                     'Liminar','LiminarClient','Liminar-free','LiminarLoader',
                     'LiminarGhost.fun','liminarclient',
-                    'AntiAFK','AutoSprint','ChestStealer','NoJumpDelay',
-                    'NoSlow','WallHack','BlockESP','ElytraSwap','FastExp',
+                    'AntiAFK','ChestStealer','NoJumpDelay',
+                    'NoSlow','WallHack','BlockESP','ElytraSwap',
                     'Killaura','KillAura','ClickAura','AutoClicker',
                     'AutoDoubleHand','MaceSwap','AutoWeb','FakeLag',
                     
@@ -903,7 +903,7 @@ public class MemScanner {
                     'ReplayMod','FlashBack',
                     'XRay','XRayMod','X-ray',
                     'MobHealthBar','HealthBarPlus','Neat','Neat+',
-                    'Minimap','Voxelmap','Waypoints','JourneyMap','Rei',
+                    'Minimap','Voxelmap','JourneyMap','Rei',
                     'AccurateBlockPlacement','ChunkAnimator','InventoryTotem',
                     'TrueSight','ElytraAutoPilot','BetterPvP','InvMove','ChestTracker',
                     'UseTracker','UseLogger','AucHelper','AntiInvis','EntityOutliner',
@@ -1213,7 +1213,7 @@ public class MemScanner {
                     'Recording' = @('ReplayMod','FlashBack')
                     'XRay' = @('XRay','XRayMod','XRayTextures','DiamondGen')
                     'Health' = @('MobHealthBar','HealthBarPlus','Neat','NeatPlus')
-                    'Minimap' = @('Minimap','Voxelmap','Waypoints','JourneyMap')
+                    'Minimap' = @('Minimap','Voxelmap','JourneyMap')
                     'Mechanics' = @('AccurateBlockPlacement','ChunkAnimator','InventoryTotem','TrueSight','ElytraAutoPilot')
                     'Advantage' = @('BetterPvP','InvMove','ChestTracker','UseTracker','UseLogger','AucHelper','AntiInvis','EntityOutliner')
                     'Location' = @('AdvancedCompass')
