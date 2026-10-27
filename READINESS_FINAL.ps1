@@ -1,9 +1,6 @@
 ﻿Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
-# Получаем путь к текущей папке
-$scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
-
 # Создаем форму
 $form = New-Object System.Windows.Forms.Form
 $form.Text = ""
