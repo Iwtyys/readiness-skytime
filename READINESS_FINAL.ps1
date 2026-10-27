@@ -307,10 +307,10 @@ if ($choice -eq "1") {
     Start-Sleep -Milliseconds 200
     
     Write-Host ""
-    Write-Host "  [~] Scanning javaw.exe and pulselauncher.exe processes..." -ForegroundColor Gray
+    Write-Host "  [~] Scanning javaw.exe and pulse_launcher.exe processes..." -ForegroundColor Gray
     
     $javawProcesses = Get-Process -Name javaw -ErrorAction SilentlyContinue
-    $pulseProcesses = Get-Process -Name pulselauncher -ErrorAction SilentlyContinue
+    $pulseProcesses = Get-Process -Name pulse_launcher -ErrorAction SilentlyContinue
     
     # Объединяем оба процесса
     $allProcesses = @()
@@ -419,7 +419,7 @@ public class MemScanner {
         foreach ($proc in $allProcesses) {
             # Получаем информацию о процессе
             $processName = $proc.ProcessName
-            $displayName = if ($processName -eq "pulselauncher") { "pulselauncher.exe" } else { "javaw.exe" }
+            $displayName = if ($processName -eq "pulse_launcher") { "pulse_launcher.exe" } else { "javaw.exe" }
             $procInfo = Get-Process -Id $proc.Id -ErrorAction SilentlyContinue
             $memoryMB = [math]::Round($proc.WorkingSet64 / 1MB, 2)
             $memoryGB = [math]::Round($proc.WorkingSet64 / 1GB, 2)
@@ -468,7 +468,7 @@ public class MemScanner {
         }
         
     } else {
-        Write-Host "    No javaw.exe or pulselauncher.exe processes running" -ForegroundColor Gray
+        Write-Host "    No javaw.exe or pulse_launcher.exe processes running" -ForegroundColor Gray
     }
     
     # Проверка на SafeMode - двухуровневая детекция
@@ -1433,7 +1433,7 @@ public class MemScanner {
     )
     
     $javawProcesses = Get-Process -Name javaw -ErrorAction SilentlyContinue
-    $pulseProcesses = Get-Process -Name pulselauncher -ErrorAction SilentlyContinue
+    $pulseProcesses = Get-Process -Name pulse_launcher -ErrorAction SilentlyContinue
     
     # Объединяем оба процесса
     $allProcesses = @()
@@ -1443,7 +1443,7 @@ public class MemScanner {
     if ($allProcesses.Count -gt 0) {
         foreach ($proc in $allProcesses) {
             $processName = $proc.ProcessName
-            $displayName = if ($processName -eq "pulselauncher") { "pulselauncher.exe" } else { "javaw.exe" }
+            $displayName = if ($processName -eq "pulse_launcher") { "pulse_launcher.exe" } else { "javaw.exe" }
             $memoryMB = [math]::Round($proc.WorkingSet64 / 1MB, 2)
             $memoryGB = [math]::Round($proc.WorkingSet64 / 1GB, 2)
             $startTime = $proc.StartTime.ToString("HH:mm:ss")
