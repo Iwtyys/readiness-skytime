@@ -254,7 +254,7 @@ function Show-Logo {
     Write-Host ""
     Write-Host ""
     Write-Centered "═══════════════════════════════════════════════════════" -color DarkGray
-    Write-Centered "║         Created by: IwTu              v1.7.4       ║" -color Gray
+    Write-Centered "║         Created by: IwTu          v1.7.4 beta     ║" -color Gray
     Write-Centered "═══════════════════════════════════════════════════════" -color DarkGray
     Write-Host ""
     Write-FullLine -char "─" -color DarkGray
