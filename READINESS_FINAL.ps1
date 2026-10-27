@@ -1525,23 +1525,17 @@ public class MemScanner {
     Write-Host ""
     Write-Host ""
     
-    Write-Host "  [~] Collecting javaw.exe and pulselauncher.exe history (last 30 minutes)..." -ForegroundColor Gray
+    Write-Host "  [~] Collecting javaw.exe history (last 30 minutes)..." -ForegroundColor Gray
     Write-Host ""
     
     $allJavaw = @()
     $currentTime = Get-Date
     
-    # 1. Получаем активные процессы javaw.exe и pulselauncher.exe (только >= 1GB)
+    # 1. Получаем активные процессы javaw.exe (только >= 1GB)
     $javawProcesses = Get-Process -Name javaw -ErrorAction SilentlyContinue
-    $pulseProcesses = Get-Process -Name pulselauncher -ErrorAction SilentlyContinue
     
-    # Объединяем оба процесса
-    $allProcesses = @()
-    if ($javawProcesses) { $allProcesses += $javawProcesses }
-    if ($pulseProcesses) { $allProcesses += $pulseProcesses }
-    
-    if ($allProcesses.Count -gt 0) {
-        foreach ($proc in $allProcesses) {
+    if ($javawProcesses.Count -gt 0) {
+        foreach ($proc in $javawProcesses) {
             $processName = $proc.ProcessName
             $memoryMB = [math]::Round($proc.WorkingSet64 / 1MB, 2)
             $memoryGB = [math]::Round($proc.WorkingSet64 / 1GB, 2)
@@ -1551,7 +1545,6 @@ public class MemScanner {
             if ($memoryGB -ge 1) {
                 $allJavaw += @{
                     PID = $proc.Id
-                    ProcessName = $processName
                     StartTime = $startTime
                     EndTime = $null
                     Memory = $memoryMB
@@ -1655,23 +1648,13 @@ public class MemScanner {
                 Where-Object { ($currentTime - $_.LastWriteTime).TotalMinutes -le 30 } |
                 Sort-Object LastWriteTime -Descending
             
-            $pulsePrefetch = Get-ChildItem -Path $prefetchPath -Filter "PULSELAUNCHER*.pf" -ErrorAction SilentlyContinue | 
-                Where-Object { ($currentTime - $_.LastWriteTime).TotalMinutes -le 30 } |
-                Sort-Object LastWriteTime -Descending
-            
-            $allPrefetch = @()
-            if ($javaPrefetch) { $allPrefetch += $javaPrefetch }
-            if ($pulsePrefetch) { $allPrefetch += $pulsePrefetch }
-            
-            if ($allPrefetch.Count -gt 0) {
-                foreach ($pf in $allPrefetch) {
-                    $processName = if ($pf.Name -like "PULSE*") { "pulselauncher" } else { "javaw" }
+            if ($javaPrefetch.Count -gt 0) {
+                foreach ($pf in $javaPrefetch) {
                     $lastWrite = $pf.LastWriteTime
                     $timeDiff = ($currentTime - $lastWrite).TotalMinutes
                     
                     $allJavaw += @{
                         PID = $null
-                        ProcessName = $processName
                         StartTime = $null
                         EndTime = $lastWrite
                         Memory = $null
@@ -1687,7 +1670,7 @@ public class MemScanner {
     }
     
     if ($closedCount -gt 0) {
-        Write-Host "  [+] Found $closedCount closed process trace(s)" -ForegroundColor Green
+        Write-Host "  [+] Found $closedCount closed javaw.exe trace(s)" -ForegroundColor Green
     }
     
     
@@ -1705,7 +1688,7 @@ public class MemScanner {
     
     $allJavaw = $uniqueJavaw
     
-    Write-Host "  [+] Found $($allJavaw.Count) process(es) (≥1GB, last 30min)" -ForegroundColor Green
+    Write-Host "  [+] Found $($allJavaw.Count) javaw.exe process(es) (≥1GB, last 30min)" -ForegroundColor Green
     Write-Host ""
     
     # Сортируем по времени последнего события (для активных - StartTime, для закрытых - EndTime)
@@ -1714,9 +1697,8 @@ public class MemScanner {
     # Показываем все найденные процессы
     $index = 1
     foreach ($proc in $allJavaw) {
-        $displayName = if ($proc.ProcessName -eq "pulselauncher") { "pulselauncher.exe" } else { "javaw.exe" }
         Write-Host "    [$index] ─────────────────────────────────────────────────────" -ForegroundColor Gray
-        Write-Host "    │ [PID $($proc.PID)] $displayName" -ForegroundColor White
+        Write-Host "    │ [PID $($proc.PID)] javaw.exe" -ForegroundColor White
         
         if ($proc.Status -eq "Active") {
             Write-Host "    │ Memory:  $($proc.Memory) MB ($($proc.MemoryGB) GB)" -ForegroundColor Gray
