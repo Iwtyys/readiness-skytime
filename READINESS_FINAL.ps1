@@ -743,11 +743,32 @@ public class MemScanner {
         (Join-Path $env:APPDATA '.tlauncher\legacy\Minecraft\game\mods'),
         (Join-Path $env:APPDATA 'LabyMod\instances'),
         (Join-Path $env:USERPROFILE '.lunarclient\profiles'),
-        (Join-Path $env:USERPROFILE '.cristalix')
+        (Join-Path $env:USERPROFILE '.cristalix'),
+        'C:\PulseVisuals\game\usermods'
     )
     
     foreach ($path in $searchPaths) {
         if (Test-Path $path) {
+            # Специальная обработка для PulseVisuals
+            if ($path -eq 'C:\PulseVisuals\game\usermods') {
+                $versionFolders = Get-ChildItem -Path $path -Directory -ErrorAction SilentlyContinue
+                foreach ($versionFolder in $versionFolders) {
+                    # Пропускаем 1.16.5
+                    if ($versionFolder.Name -eq '1.16.5') {
+                        continue
+                    }
+                    
+                    $jars = Get-ChildItem -Path $versionFolder.FullName -Filter "*.jar" -ErrorAction SilentlyContinue
+                    if ($jars.Count -gt 0) {
+                        if (-not ($modsFolders -contains $versionFolder.FullName)) {
+                            $modsFolders += $versionFolder.FullName
+                        }
+                    }
+                }
+                continue
+            }
+            
+            # Обычная обработка для других путей
             if ((Get-Item $path).PSIsContainer) {
                 $foundMods = Get-ChildItem -Path $path -Recurse -Directory -Filter "mods" -ErrorAction SilentlyContinue -Depth 3
                 foreach ($modFolder in $foundMods) {
