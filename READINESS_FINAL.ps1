@@ -875,7 +875,7 @@ public class MemScanner {
                     'TopkaAutoBuy','XorekAutoBuy','TopkaAutoSell','XorekAutoMyst',
                     'TopkaCasino','AutoSell','AutoCasino','DiamondGen','AutoAttack',
                     'CleanCut','InventoryControlTweaks','AutoLeave','Foodslot',
-                    'Quickstack','ItemSwap','AutoTool','FeatherLauncher','Badlion',
+                    'Quickstack','AutoTool','FeatherLauncher','Badlion',
                     'FeverVisuals','WaveVisuals','ClientCommands','Schematica',
                     'Litematica','CheatUtils','FreeCam','WorldEdit','EffortlessBuilding',
                     'Pojav','FCL','MobileEmulator'
@@ -911,7 +911,7 @@ public class MemScanner {
                     'Baritone','Fabaritone','AutoMining','AutoFish',
                     'TopkaAutoBuy','TopkaAutoSell','XorekAutoMyst','AutoCasino',
                     'DiamondGen',
-                    'AutoAttack','CleanCut','InventoryControlTweaks','AutoLeave','Foodslot','ItemSwap','AutoTool',
+                    'AutoAttack','CleanCut','InventoryControlTweaks','AutoLeave','Foodslot','AutoTool',
                     'FeatherLauncher','Badlion','FeverVisuals','WaveVisuals',
                     'ClientCommands','Schematica','Litematica','CheatUtils','FreeCam','WorldEdit','EffortlessBuilding',
                     'Pojav','FCL','MobileEmulator'
@@ -1219,7 +1219,7 @@ public class MemScanner {
                     'Location' = @('AdvancedCompass')
                     'AutoMining' = @('Baritone','Fabaritone','AutoMining','AutoFish')
                     'AutoServer' = @('TopkaAutoBuy','XorekAutoBuy','TopkaAutoSell','XorekAutoMyst','TopkaCasino','AutoSell','AutoCasino')
-                    'PvP' = @('AutoAttack','CleanCut','InventoryControlTweaks','AutoLeave','Foodslot','Quickstack','ItemSwap','AutoTool')
+                    'PvP' = @('AutoAttack','CleanCut','InventoryControlTweaks','AutoLeave','Foodslot','Quickstack','AutoTool')
                     'Visual' = @('FeatherLauncher','BadlionClient','FeverVisuals','WaveVisuals')
                     'Cheat' = @('ClientCommands','Schematica','Litematica','CheatUtils','FreeCam','WorldEdit','EffortlessBuilding')
                     'Mobile' = @('Pojav','FCL','MobileEmulator')
