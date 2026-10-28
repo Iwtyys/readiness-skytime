@@ -3010,15 +3010,17 @@ public class MemScanner {
         Show-Logo
         
     } elseif ($cheatChoice -eq "0") {
-        # Возврат в главное меню
-        Clear-Host
-        Show-Logo
-        continue
+        # Возврат в главное меню - ничего не делаем, цикл while покажет меню сам
     } else {
         # Неверный выбор
-        Clear-Host
-        Show-Logo
+        Write-Host ""
+        Write-Host "    Invalid choice!" -ForegroundColor Red
+        Start-Sleep -Seconds 1
     }
+    
+    # После выхода из Cheat Detect очищаем экран и показываем лого
+    Clear-Host
+    Show-Logo
     
 } elseif ($choice -eq "0") {
     exit
