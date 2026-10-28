@@ -114,20 +114,9 @@ $progressPanel.Add_Paint({
     $g = $e.Graphics
     $g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
     
-    # Рисуем светящуюся белую полоску
+    # Рисуем белую полоску
     $fillWidth = ($progressPanel.Width * $script:progress) / 100
     if ($fillWidth -gt 0) {
-        # Свечение (glow effect) - несколько слоёв с прозрачностью
-        for ($i = 3; $i -ge 0; $i--) {
-            $glowAlpha = 20 + ($i * 15)
-            $glowBrush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb($glowAlpha, 255, 255, 255))
-            $glowHeight = $progressPanel.Height + ($i * 2)
-            $glowY = -$i
-            $g.FillRectangle($glowBrush, 0, $glowY, $fillWidth, $glowHeight)
-            $glowBrush.Dispose()
-        }
-        
-        # Основная яркая белая полоска
         $brush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::White)
         $g.FillRectangle($brush, 0, 0, $fillWidth, $progressPanel.Height)
         $brush.Dispose()
@@ -755,8 +744,7 @@ public class MemScanner {
         (Join-Path $env:APPDATA 'LabyMod\instances'),
         (Join-Path $env:USERPROFILE '.lunarclient\profiles'),
         (Join-Path $env:USERPROFILE '.cristalix'),
-        'C:\PulseVisuals\game\usermods',
-        'C:\Projects\AtomVisuals\run\mods'
+        'C:\PulseVisuals\game\usermods'
     )
     
     foreach ($path in $searchPaths) {
@@ -2138,12 +2126,324 @@ public class MemScanner {
         Write-Host ""
     }
     
+    # Проверка сохраненных аккаунтов (Login Data)
+    Write-Host "  ╔═════════════════════════════════════════════════════════════════════════╗" -ForegroundColor Gray
+    Write-Host "  ║                    SAVED ACCOUNTS CHECK                                 ║" -ForegroundColor Gray
+    Write-Host "  ╚═════════════════════════════════════════════════════════════════════════╝" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "  [~] Checking for saved accounts on cheat sites..." -ForegroundColor Gray
+    Write-Host ""
+    
+    # Проверяем все запущенные браузеры
+    $runningBrowsers = @()
+    $browserProcesses = @(
+        @{Name="chrome"; Display="Chrome"},
+        @{Name="msedge"; Display="Edge"},
+        @{Name="opera"; Display="Opera"},
+        @{Name="yandex"; Display="Yandex"},
+        @{Name="brave"; Display="Brave"},
+        @{Name="vivaldi"; Display="Vivaldi"},
+        @{Name="firefox"; Display="Firefox"}
+    )
+    
+    foreach ($browser in $browserProcesses) {
+        $proc = Get-Process -Name $browser.Name -ErrorAction SilentlyContinue
+        if ($proc) {
+            $runningBrowsers += $browser.Display
+        }
+    }
+    
+    if ($runningBrowsers.Count -gt 0) {
+        Write-Host "  ⚠️  Running browsers detected: $($runningBrowsers -join ', ')" -ForegroundColor Yellow
+        Write-Host "     Login Data files may be locked." -ForegroundColor Yellow
+        Write-Host ""
+        Write-Host "     Close all browsers for accurate results? (Y/N): " -NoNewline -ForegroundColor Yellow
+        $response = Read-Host
+        
+        if ($response -eq 'Y' -or $response -eq 'y') {
+            Write-Host "     Closing browsers..." -ForegroundColor Gray
+            
+            foreach ($browser in $browserProcesses) {
+                Stop-Process -Name $browser.Name -Force -ErrorAction SilentlyContinue
+            }
+            
+            Start-Sleep -Seconds 2
+            Write-Host "     Browsers closed." -ForegroundColor Green
+            Write-Host ""
+        } else {
+            Write-Host "     Continuing with limited access..." -ForegroundColor Yellow
+            Write-Host ""
+        }
+    }
+    
+    $foundAccounts = @{}
+    $script:totalAccounts = 0
+    
+    # Функция для проверки Login Data (с обходом блокировки)
+    function Check-SavedLogins {
+        param($loginDataPath, $browserName)
+        
+        if (-not (Test-Path $loginDataPath)) {
+            return
+        }
+        
+        $tempLoginData = Join-Path $env:TEMP "login_check_$(Get-Random).db"
+        
+        try {
+            # Метод 1: Стандартное копирование
+            Copy-Item -Path $loginDataPath -Destination $tempLoginData -Force -ErrorAction Stop
+            Start-Sleep -Milliseconds 200
+            
+        } catch {
+            # Метод 2: Чтение через FileStream (обход блокировки)
+            try {
+                $fileStream = [System.IO.File]::Open($loginDataPath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::ReadWrite)
+                $fileBytes = New-Object byte[] $fileStream.Length
+                $fileStream.Read($fileBytes, 0, $fileStream.Length) | Out-Null
+                $fileStream.Close()
+                
+                [System.IO.File]::WriteAllBytes($tempLoginData, $fileBytes)
+                Start-Sleep -Milliseconds 100
+                
+            } catch {
+                # Метод 3: Сырое чтение (последняя попытка)
+                try {
+                    $bytes = [System.IO.File]::ReadAllBytes($loginDataPath)
+                    $rawText = [System.Text.Encoding]::UTF8.GetString($bytes)
+                    
+                    foreach ($site in $suspiciousSites) {
+                        if ($rawText -match [regex]::Escape($site)) {
+                            if (-not $foundAccounts.ContainsKey($site)) {
+                                $foundAccounts[$site] = @{
+                                    Browsers = @()
+                                    Usernames = @()
+                                }
+                            }
+                            
+                            if (-not ($foundAccounts[$site].Browsers -contains $browserName)) {
+                                $foundAccounts[$site].Browsers += $browserName
+                                $script:totalAccounts++
+                            }
+                        }
+                    }
+                    return
+                } catch {
+                    return
+                }
+            }
+        }
+        
+        # Если файл скопирован успешно - читаем через SQLite
+        if (Test-Path $tempLoginData) {
+            try {
+                $connectionString = "Data Source=$tempLoginData;Version=3;Read Only=True;"
+                $connection = New-Object System.Data.SQLite.SQLiteConnection($connectionString)
+                $connection.Open()
+                
+                $command = $connection.CreateCommand()
+                $command.CommandText = "SELECT origin_url, username_value FROM logins WHERE origin_url IS NOT NULL"
+                
+                $reader = $command.ExecuteReader()
+                
+                while ($reader.Read()) {
+                    try {
+                        $originUrl = $reader["origin_url"].ToString()
+                        $username = $reader["username_value"].ToString()
+                        
+                        foreach ($site in $suspiciousSites) {
+                            if ($originUrl -match [regex]::Escape($site)) {
+                                if (-not $foundAccounts.ContainsKey($site)) {
+                                    $foundAccounts[$site] = @{
+                                        Browsers = @()
+                                        Usernames = @()
+                                    }
+                                }
+                                
+                                if (-not ($foundAccounts[$site].Browsers -contains $browserName)) {
+                                    $foundAccounts[$site].Browsers += $browserName
+                                }
+                                
+                                if ($username -and $username.Length -gt 0) {
+                                    $maskedUsername = if ($username.Length -gt 3) {
+                                        $username.Substring(0, 3) + "***"
+                                    } else {
+                                        "***"
+                                    }
+                                    
+                                    if (-not ($foundAccounts[$site].Usernames -contains $maskedUsername)) {
+                                        $foundAccounts[$site].Usernames += $maskedUsername
+                                    }
+                                }
+                                
+                                $script:totalAccounts++
+                                break
+                            }
+                        }
+                    } catch {
+                        continue
+                    }
+                }
+                
+                $reader.Close()
+                $connection.Close()
+                
+            } catch {
+                # SQLite не сработал - пробуем сырое чтение временного файла
+                try {
+                    $bytes = [System.IO.File]::ReadAllBytes($tempLoginData)
+                    $rawText = [System.Text.Encoding]::UTF8.GetString($bytes)
+                    
+                    foreach ($site in $suspiciousSites) {
+                        if ($rawText -match [regex]::Escape($site)) {
+                            if (-not $foundAccounts.ContainsKey($site)) {
+                                $foundAccounts[$site] = @{
+                                    Browsers = @()
+                                    Usernames = @()
+                                }
+                            }
+                            
+                            if (-not ($foundAccounts[$site].Browsers -contains $browserName)) {
+                                $foundAccounts[$site].Browsers += $browserName
+                                $script:totalAccounts++
+                            }
+                        }
+                    }
+                } catch {
+                    # Игнорируем
+                }
+            }
+            
+            # Удаляем временный файл
+            Start-Sleep -Milliseconds 100
+            Remove-Item -Path $tempLoginData -Force -ErrorAction SilentlyContinue
+        }
+    }
+    
+    # Пути к Login Data
+    $chromeLoginData = "$env:LOCALAPPDATA\Google\Chrome\User Data\Default\Login Data"
+    $edgeLoginData = "$env:LOCALAPPDATA\Microsoft\Edge\User Data\Default\Login Data"
+    $operaLoginData = "$env:APPDATA\Opera Software\Opera Stable\Default\Login Data"
+    $operaGXLoginData = "$env:APPDATA\Opera Software\Opera GX Stable\Default\Login Data"
+    $yandexLoginData = "$env:LOCALAPPDATA\Yandex\YandexBrowser\User Data\Default\Ya Passman Data"
+    $braveLoginData = "$env:LOCALAPPDATA\BraveSoftware\Brave-Browser\User Data\Default\Login Data"
+    $vivaldiLoginData = "$env:LOCALAPPDATA\Vivaldi\User Data\Default\Login Data"
+    
+    Write-Host "  [~] Scanning browsers for saved accounts..." -ForegroundColor Gray
+    Write-Host ""
+    
+    $scannedCount = 0
+    $installedBrowsers = @()
+    
+    # Проверяем какие браузеры установлены
+    if (Test-Path $chromeLoginData) { $installedBrowsers += "Chrome"; $scannedCount++ }
+    if (Test-Path $edgeLoginData) { $installedBrowsers += "Edge"; $scannedCount++ }
+    if (Test-Path $operaLoginData) { $installedBrowsers += "Opera"; $scannedCount++ }
+    if (Test-Path $operaGXLoginData) { $installedBrowsers += "Opera GX"; $scannedCount++ }
+    if (Test-Path $yandexLoginData) { $installedBrowsers += "Yandex"; $scannedCount++ }
+    if (Test-Path $braveLoginData) { $installedBrowsers += "Brave"; $scannedCount++ }
+    if (Test-Path $vivaldiLoginData) { $installedBrowsers += "Vivaldi"; $scannedCount++ }
+    
+    # Firefox проверка
+    $firefoxProfilesPath = "$env:APPDATA\Mozilla\Firefox\Profiles"
+    if (Test-Path $firefoxProfilesPath) {
+        $firefoxProfiles = Get-ChildItem -Path $firefoxProfilesPath -Directory
+        foreach ($profile in $firefoxProfiles) {
+            if (Test-Path (Join-Path $profile.FullName "logins.json")) {
+                $installedBrowsers += "Firefox"
+                $scannedCount++
+                break
+            }
+        }
+    }
+    
+    Write-Host "  Found $scannedCount browser(s): $($installedBrowsers -join ', ')" -ForegroundColor Gray
+    Write-Host ""
+    
+    # Проверяем каждый браузер
+    Check-SavedLogins -loginDataPath $chromeLoginData -browserName "Google Chrome"
+    Check-SavedLogins -loginDataPath $edgeLoginData -browserName "Microsoft Edge"
+    Check-SavedLogins -loginDataPath $operaLoginData -browserName "Opera"
+    Check-SavedLogins -loginDataPath $operaGXLoginData -browserName "Opera GX"
+    Check-SavedLogins -loginDataPath $yandexLoginData -browserName "Yandex Browser"
+    Check-SavedLogins -loginDataPath $braveLoginData -browserName "Brave"
+    Check-SavedLogins -loginDataPath $vivaldiLoginData -browserName "Vivaldi"
+    
+    # Firefox - использует logins.json вместо Login Data
+    $firefoxProfilesPath = "$env:APPDATA\Mozilla\Firefox\Profiles"
+    if (Test-Path $firefoxProfilesPath) {
+        $firefoxProfiles = Get-ChildItem -Path $firefoxProfilesPath -Directory
+        foreach ($profile in $firefoxProfiles) {
+            $firefoxLoginsPath = Join-Path $profile.FullName "logins.json"
+            if (Test-Path $firefoxLoginsPath) {
+                try {
+                    $firefoxLogins = Get-Content -Path $firefoxLoginsPath -Raw | ConvertFrom-Json
+                    
+                    foreach ($login in $firefoxLogins.logins) {
+                        $hostname = $login.hostname
+                        
+                        foreach ($site in $suspiciousSites) {
+                            if ($hostname -match [regex]::Escape($site)) {
+                                if (-not $foundAccounts.ContainsKey($site)) {
+                                    $foundAccounts[$site] = @{
+                                        Browsers = @()
+                                        Usernames = @()
+                                    }
+                                }
+                                
+                                if (-not ($foundAccounts[$site].Browsers -contains "Firefox")) {
+                                    $foundAccounts[$site].Browsers += "Firefox"
+                                }
+                                
+                                if ($login.encryptedUsername) {
+                                    $foundAccounts[$site].Usernames += "***"
+                                }
+                                
+                                $script:totalAccounts++
+                                break
+                            }
+                        }
+                    }
+                } catch {
+                    # Игнорируем ошибки чтения Firefox
+                }
+                break
+            }
+        }
+    }
+    
+    # Показываем результаты проверки аккаунтов
+    if ($foundAccounts.Count -gt 0) {
+        Write-Host "  ╔═════════════════════════════════════════════════════════════════════════╗" -ForegroundColor Red
+        Write-Host "  ║                     🚨 SAVED ACCOUNTS FOUND! 🚨                        ║" -ForegroundColor Red
+        Write-Host "  ╚═════════════════════════════════════════════════════════════════════════╝" -ForegroundColor Red
+        Write-Host ""
+        
+        foreach ($entry in $foundAccounts.GetEnumerator()) {
+            Write-Host "    • $($entry.Key)" -ForegroundColor White -NoNewline
+            Write-Host " - Account detected" -ForegroundColor Red
+            Write-Host "      Browser(s): $($entry.Value.Browsers -join ', ')" -ForegroundColor Gray
+            
+            if ($entry.Value.Usernames.Count -gt 0) {
+                Write-Host "      Username(s): $($entry.Value.Usernames -join ', ')" -ForegroundColor DarkGray
+            }
+        }
+        
+        Write-Host ""
+        
+    } else {
+        Write-Host "  [✓] NO SAVED ACCOUNTS FOUND" -ForegroundColor Green
+        Write-Host ""
+        Write-Host "    No saved logins for cheat websites detected." -ForegroundColor Gray
+        Write-Host ""
+    }
+    
     # Статистика
     Write-Host "  ─────────────────────────────────────────────────────────────────────────" -ForegroundColor Gray
     Write-Host "  📊 Statistics:" -ForegroundColor Gray
     Write-Host "     Browsers scanned:          9 (Chrome, Edge, Opera, Opera GX, Yandex, Brave, Vivaldi, Tor, Firefox)" -ForegroundColor White
     Write-Host "     Suspicious sites visited:  $($foundUrls.Count)" -ForegroundColor $(if($foundUrls.Count -gt 0){'Red'}else{'Green'})
     Write-Host "     Total visits:              $totalFound" -ForegroundColor $(if($totalFound -gt 0){'Red'}else{'Green'})
+    Write-Host "     Saved accounts found:      $($foundAccounts.Count)" -ForegroundColor $(if($foundAccounts.Count -gt 0){'Red'}else{'Green'})
     Write-Host "  ─────────────────────────────────────────────────────────────────────────" -ForegroundColor Gray
     Write-Host ""
     
@@ -2163,6 +2463,7 @@ public class MemScanner {
 }
 
 }
+
 
 
 
