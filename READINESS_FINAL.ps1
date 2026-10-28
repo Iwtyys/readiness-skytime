@@ -1449,8 +1449,7 @@ public class MemScanner {
     # Suspicious DLLs blacklist
     $suspiciousDlls = @(
         'WLDAP32.dll',
-        'wldap32.dll',
-        'secur32.dll'
+        'wldap32.dll'
     )
     
     $javawProcesses = Get-Process -Name javaw -ErrorAction SilentlyContinue
