@@ -1,6 +1,194 @@
 ﻿Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
+# Правильный ключ
+$script:correctKey = "SKYTIME2026"
+$script:keyAccepted = $false
+
+# ============================================================================
+# ФОРМА ВВОДА КЛЮЧА
+# ============================================================================
+
+$keyForm = New-Object System.Windows.Forms.Form
+$keyForm.Text = ""
+$keyForm.Size = New-Object System.Drawing.Size(400, 250)
+$keyForm.StartPosition = "CenterScreen"
+$keyForm.FormBorderStyle = "None"
+$keyForm.BackColor = [System.Drawing.Color]::FromArgb(25, 25, 25)
+$keyForm.TopMost = $true
+$keyForm.Opacity = 0
+
+# Закругление углов
+$radius = 20
+$path = New-Object System.Drawing.Drawing2D.GraphicsPath
+$rect = New-Object System.Drawing.Rectangle(0, 0, 400, 250)
+$path.AddArc($rect.X, $rect.Y, $radius * 2, $radius * 2, 180, 90)
+$path.AddArc($rect.Right - $radius * 2, $rect.Y, $radius * 2, $radius * 2, 270, 90)
+$path.AddArc($rect.Right - $radius * 2, $rect.Bottom - $radius * 2, $radius * 2, $radius * 2, 0, 90)
+$path.AddArc($rect.X, $rect.Bottom - $radius * 2, $radius * 2, $radius * 2, 90, 90)
+$path.CloseFigure()
+$keyForm.Region = New-Object System.Drawing.Region($path)
+
+# Panel
+$keyPanel = New-Object System.Windows.Forms.Panel
+$keyPanel.Dock = "Fill"
+$keyPanel.BackColor = [System.Drawing.Color]::FromArgb(25, 25, 25)
+$keyForm.Controls.Add($keyPanel)
+
+# Перетаскивание
+$script:isDragging = $false
+$script:dragStartPoint = New-Object System.Drawing.Point(0, 0)
+
+$keyPanel.Add_MouseDown({
+    param($sender, $e)
+    if ($e.Button -eq [System.Windows.Forms.MouseButtons]::Left) {
+        $script:isDragging = $true
+        $script:dragStartPoint = $e.Location
+    }
+})
+
+$keyPanel.Add_MouseMove({
+    param($sender, $e)
+    if ($script:isDragging) {
+        $newLocation = $keyForm.Location
+        $newLocation.X += $e.X - $script:dragStartPoint.X
+        $newLocation.Y += $e.Y - $script:dragStartPoint.Y
+        $keyForm.Location = $newLocation
+    }
+})
+
+$keyPanel.Add_MouseUp({
+    param($sender, $e)
+    if ($e.Button -eq [System.Windows.Forms.MouseButtons]::Left) {
+        $script:isDragging = $false
+    }
+})
+
+# Заголовок "ACTIVATION"
+$titleLabel = New-Object System.Windows.Forms.Label
+$titleLabel.Text = "ACTIVATION"
+$titleLabel.Font = New-Object System.Drawing.Font("Segoe UI", 20, [System.Drawing.FontStyle]::Bold)
+$titleLabel.ForeColor = [System.Drawing.Color]::White
+$titleLabel.BackColor = [System.Drawing.Color]::Transparent
+$titleLabel.AutoSize = $false
+$titleLabel.Size = New-Object System.Drawing.Size(380, 50)
+$titleLabel.Location = New-Object System.Drawing.Point(10, 30)
+$titleLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
+$keyPanel.Controls.Add($titleLabel)
+
+# Подзаголовок
+$subtitleLabel = New-Object System.Windows.Forms.Label
+$subtitleLabel.Text = "Enter your key to continue"
+$subtitleLabel.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Regular)
+$subtitleLabel.ForeColor = [System.Drawing.Color]::FromArgb(150, 150, 150)
+$subtitleLabel.BackColor = [System.Drawing.Color]::Transparent
+$subtitleLabel.AutoSize = $false
+$subtitleLabel.Size = New-Object System.Drawing.Size(380, 30)
+$subtitleLabel.Location = New-Object System.Drawing.Point(10, 70)
+$subtitleLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
+$keyPanel.Controls.Add($subtitleLabel)
+
+# Текстовое поле для ввода ключа
+$keyTextBox = New-Object System.Windows.Forms.TextBox
+$keyTextBox.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Regular)
+$keyTextBox.Size = New-Object System.Drawing.Size(300, 30)
+$keyTextBox.Location = New-Object System.Drawing.Point(50, 120)
+$keyTextBox.BackColor = [System.Drawing.Color]::FromArgb(40, 40, 40)
+$keyTextBox.ForeColor = [System.Drawing.Color]::White
+$keyTextBox.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
+$keyTextBox.TextAlign = [System.Windows.Forms.HorizontalAlignment]::Center
+$keyTextBox.UseSystemPasswordChar = $true  # Показывает *** вместо текста
+$keyPanel.Controls.Add($keyTextBox)
+
+# Label для сообщений об ошибке
+$errorLabel = New-Object System.Windows.Forms.Label
+$errorLabel.Text = ""
+$errorLabel.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Regular)
+$errorLabel.ForeColor = [System.Drawing.Color]::Red
+$errorLabel.BackColor = [System.Drawing.Color]::Transparent
+$errorLabel.AutoSize = $false
+$errorLabel.Size = New-Object System.Drawing.Size(380, 20)
+$errorLabel.Location = New-Object System.Drawing.Point(10, 155)
+$errorLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
+$keyPanel.Controls.Add($errorLabel)
+
+# Кнопка "CONTINUE"
+$continueButton = New-Object System.Windows.Forms.Button
+$continueButton.Text = "CONTINUE"
+$continueButton.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+$continueButton.Size = New-Object System.Drawing.Size(150, 35)
+$continueButton.Location = New-Object System.Drawing.Point(125, 185)
+$continueButton.BackColor = [System.Drawing.Color]::FromArgb(60, 60, 60)
+$continueButton.ForeColor = [System.Drawing.Color]::White
+$continueButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+$continueButton.FlatAppearance.BorderSize = 0
+$continueButton.Cursor = [System.Windows.Forms.Cursors]::Hand
+$keyPanel.Controls.Add($continueButton)
+
+# Обработчик кнопки Continue
+$continueButton.Add_Click({
+    $enteredKey = $keyTextBox.Text.Trim()
+    
+    if ($enteredKey -eq $script:correctKey) {
+        $script:keyAccepted = $true
+        $errorLabel.Text = "✓ Key accepted!"
+        $errorLabel.ForeColor = [System.Drawing.Color]::Green
+        Start-Sleep -Milliseconds 500
+        $keyForm.Close()
+    } else {
+        $errorLabel.Text = "✗ Invalid key! Access denied."
+        $errorLabel.ForeColor = [System.Drawing.Color]::Red
+        $keyTextBox.Text = ""
+        $keyTextBox.Focus()
+        
+        # Тряска окна при ошибке
+        $originalLocation = $keyForm.Location
+        for ($i = 0; $i -lt 3; $i++) {
+            $keyForm.Location = New-Object System.Drawing.Point($originalLocation.X - 10, $originalLocation.Y)
+            Start-Sleep -Milliseconds 50
+            $keyForm.Location = New-Object System.Drawing.Point($originalLocation.X + 10, $originalLocation.Y)
+            Start-Sleep -Milliseconds 50
+        }
+        $keyForm.Location = $originalLocation
+    }
+})
+
+# Enter для отправки
+$keyTextBox.Add_KeyDown({
+    param($sender, $e)
+    if ($e.KeyCode -eq [System.Windows.Forms.Keys]::Enter) {
+        $continueButton.PerformClick()
+    }
+})
+
+# Fade-in анимация для формы ключа
+$keyFadeTimer = New-Object System.Windows.Forms.Timer
+$keyFadeTimer.Interval = 20
+$keyFadeTimer.Add_Tick({
+    if ($keyForm.Opacity -lt 1) {
+        $keyForm.Opacity += 0.05
+        if ($keyForm.Opacity -ge 1) {
+            $keyForm.Opacity = 1
+            $keyFadeTimer.Stop()
+            $keyTextBox.Focus()
+        }
+    }
+})
+
+$keyFadeTimer.Start()
+
+# Показываем форму ввода ключа
+[void]$keyForm.ShowDialog()
+
+# Если ключ не принят - выход
+if (-not $script:keyAccepted) {
+    exit
+}
+
+# ============================================================================
+# ФОРМА ЗАГРУЗКИ (ПОКАЗЫВАЕТСЯ ТОЛЬКО ПОСЛЕ ПРАВИЛЬНОГО КЛЮЧА)
+# ============================================================================
+
 # Создаем форму
 $form = New-Object System.Windows.Forms.Form
 $form.Text = ""
@@ -96,6 +284,18 @@ $label.Add_MouseUp({
 })
 
 $mainPanel.Controls.Add($label)
+
+# Label для версии "v1.7.4 beta"
+$versionLabel = New-Object System.Windows.Forms.Label
+$versionLabel.Text = "v1.7.4 beta"
+$versionLabel.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Regular)
+$versionLabel.ForeColor = [System.Drawing.Color]::FromArgb(150, 150, 150)
+$versionLabel.BackColor = [System.Drawing.Color]::Transparent
+$versionLabel.AutoSize = $false
+$versionLabel.Size = New-Object System.Drawing.Size(380, 25)
+$versionLabel.Location = New-Object System.Drawing.Point(10, 145)
+$versionLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
+$mainPanel.Controls.Add($versionLabel)
 
 # Panel для кастомной полоски загрузки
 $progressPanel = New-Object System.Windows.Forms.Panel
@@ -267,12 +467,11 @@ while ($true) {
     Write-Host ""
     Write-Host "Select scan mode:" -ForegroundColor Gray
     Write-Host ""
-    Write-Host "  [1] Scan javaw.exe memory" -ForegroundColor White
-    Write-Host "  [2] Check java.exe JAR files" -ForegroundColor White
-    Write-Host "  [3] Scan mods folder" -ForegroundColor White
-    Write-Host "  [4] Check suspicious DLL" -ForegroundColor White
-    Write-Host "  [5] SafeMode Detection" -ForegroundColor White
-    Write-Host "  [6] Browser History Scanner" -ForegroundColor White
+    Write-Host "  [1] Scan javaw.exe memory (beta)" -ForegroundColor White
+    Write-Host "  [2] Scan mods folder" -ForegroundColor White
+    Write-Host "  [3] SafeMode Detection (beta)" -ForegroundColor White
+    Write-Host "  [4] Browser History Scanner" -ForegroundColor White
+    Write-Host "  [5] Cheat Detect (beta)" -ForegroundColor White
     Write-Host ""
     Write-Host "  [0] Exit" -ForegroundColor DarkGray
     Write-Host ""
@@ -488,197 +687,6 @@ public class MemScanner {
 } elseif ($choice -eq "2") {
     Clear-Host
     Show-Logo
-    Write-Host "                   JAR File Checker Mode" -ForegroundColor Gray
-    Write-Host ""
-    
-    $totalFound = 0
-    
-    Write-Host "[~] Checking running java.exe processes..." -ForegroundColor Gray
-    
-    $javaProcesses = Get-Process -Name java -ErrorAction SilentlyContinue
-    $jarFiles = @()
-    
-    if ($javaProcesses) {
-        Write-Host "    Found $($javaProcesses.Count) java.exe process(es)" -ForegroundColor Gray
-        
-        foreach ($proc in $javaProcesses) {
-            try {
-                $commandLine = (Get-CimInstance Win32_Process -Filter "ProcessId = $($proc.Id)").CommandLine
-                
-                if ($commandLine -match '\.jar') {
-                    if ($commandLine -match '([A-Za-z]:[^\s]+\.jar)') {
-                        $jarPath = $matches[1] -replace '"', ''
-                        if (-not ($jarFiles -contains $jarPath)) {
-                            $jarFiles += $jarPath
-                        }
-                    }
-                }
-            } catch { }
-        }
-    } else {
-        Write-Host "    No running java.exe processes" -ForegroundColor Gray
-    }
-    
-    Write-Host ""
-    Write-Host "[~] Checking recent java.exe executions..." -ForegroundColor Gray
-    
-    # Get recent java.exe from Windows Event Log
-    try {
-        $recentJava = Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-Shell-Core/Operational'; ID=9707} -MaxEvents 100 -ErrorAction SilentlyContinue | 
-            Where-Object { $_.Message -match 'java\.exe' -and $_.Message -match '\.jar' }
-        
-        if ($recentJava) {
-            Write-Host "    Found recent java.exe executions in Event Log" -ForegroundColor Gray
-            
-            foreach ($event in $recentJava) {
-                if ($event.Message -match '([A-Z]:\\[^\\x00\r\n]+\.jar)') {
-                    $jarPath = $matches[1]
-                    if ((Test-Path $jarPath) -and (-not ($jarFiles -contains $jarPath))) {
-                        $jarFiles += $jarPath
-                    }
-                }
-            }
-        }
-    } catch { }
-    
-    # Check Prefetch directory
-    Write-Host ""
-    Write-Host "[~] Checking Prefetch files..." -ForegroundColor Gray
-    
-    
-    $prefetchPath = "C:\Windows\Prefetch"
-    if (Test-Path $prefetchPath) {
-        try {
-            $javaPrefetch = Get-ChildItem -Path $prefetchPath -Filter "JAVA*.pf" -ErrorAction SilentlyContinue | 
-                Sort-Object LastWriteTime -Descending | Select-Object -First 5
-            
-            if ($javaPrefetch) {
-                Write-Host "    Found $($javaPrefetch.Count) java Prefetch file(s)" -ForegroundColor Gray
-                
-                foreach ($pf in $javaPrefetch) {
-                    try {
-                        $content = [System.IO.File]::ReadAllBytes($pf.FullName)
-                        $textUnicode = [System.Text.Encoding]::Unicode.GetString($content)
-                        $textAscii = [System.Text.Encoding]::ASCII.GetString($content)
-                        
-                        # Try to find .jar paths
-                        $allMatches = [regex]::Matches($textUnicode + $textAscii, '([A-Z]:\\[^\x00]+?\.jar)')
-                        
-                        foreach ($match in $allMatches) {
-                            $jarPath = $match.Groups[1].Value -replace '[^\x20-\x7E]', ''
-                            $jarPath = $jarPath.Trim()
-                            
-                            if ($jarPath -match '^[A-Z]:\\' -and $jarPath.EndsWith('.jar')) {
-                                if ((Test-Path $jarPath) -and (-not ($jarFiles -contains $jarPath))) {
-                                    Write-Host "      Found: $jarPath" -ForegroundColor Gray
-                                    $jarFiles += $jarPath
-                                }
-                            }
-                        }
-                    } catch { }
-                }
-            } else {
-                Write-Host "    No java Prefetch files found" -ForegroundColor Gray
-            }
-        } catch {
-            Write-Host "    [!] Cannot access Prefetch (need admin)" -ForegroundColor Gray
-        }
-    }
-    
-    
-    Write-Host ""
-    Write-Host "[~] Searching recent JAR files in Downloads..." -ForegroundColor Gray
-    
-    $downloadsPath = Join-Path $env:USERPROFILE 'Downloads'
-    if (Test-Path $downloadsPath) {
-        $recentJars = Get-ChildItem -Path $downloadsPath -Filter "*.jar" -Recurse -ErrorAction SilentlyContinue | 
-            Where-Object { $_.LastWriteTime -gt (Get-Date).AddDays(-30) } | 
-            Sort-Object LastWriteTime -Descending | 
-            Select-Object -First 20
-        
-        if ($recentJars) {
-            Write-Host "    Found $($recentJars.Count) recent JAR file(s)" -ForegroundColor Gray
-            foreach ($jar in $recentJars) {
-                if (-not ($jarFiles -contains $jar.FullName)) {
-                    $jarFiles += $jar.FullName
-                }
-            }
-        }
-    }
-    
-    Write-Host ""
-    Write-Host "[~] Scanning JAR files..." -ForegroundColor Gray
-    
-    if ($jarFiles.Count -gt 0) {
-        Write-Host "    Found $($jarFiles.Count) JAR file(s) to check" -ForegroundColor Gray
-        Write-Host ""
-        
-        Add-Type -Assembly System.IO.Compression.FileSystem
-        
-        foreach ($jarPath in $jarFiles) {
-            Write-Host "    [*] Checking: $jarPath" -ForegroundColor Gray
-            
-            if (Test-Path $jarPath) {
-                try {
-                    $zip = [System.IO.Compression.ZipFile]::OpenRead($jarPath)
-                    
-                    $suspiciousClasses = @(
-                        'net/java/c.class',
-                        'net/java/l.class', 
-                        'net/java/s.class',
-                        'net/java/f.class'
-                    )
-                    
-                    $foundClasses = @()
-                    
-                    foreach ($entry in $zip.Entries) {
-                        foreach ($suspicious in $suspiciousClasses) {
-                            if ($entry.FullName -eq $suspicious) {
-                                $foundClasses += $suspicious
-                            }
-                        }
-                    }
-                    
-                    $zip.Dispose()
-                    
-                    if ($foundClasses.Count -gt 0) {
-                        Write-Host ""
-                        Write-Host "        [!!!] CHEAT DETECTED!" -ForegroundColor Red
-                        Write-Host "        Found suspicious classes:" -ForegroundColor Red
-                        foreach ($cls in $foundClasses) {
-                            Write-Host "          - $cls" -ForegroundColor White
-                        }
-                        Write-Host ""
-                        $totalFound++
-                    } else {
-                        Write-Host "        [+] Clean" -ForegroundColor Green
-                    }
-                    
-                } catch {
-                    Write-Host "        [!] Cannot read JAR: $($_.Exception.Message)" -ForegroundColor Gray
-                }
-            } else {
-                Write-Host "        [!] File not found" -ForegroundColor Gray
-            }
-        }
-    } else {
-        Write-Host "    No JAR files found" -ForegroundColor Gray
-    }
-    
-    Write-Host ""
-    if ($totalFound -eq 0) {
-        Write-Host "[+] Scan complete! No cheats detected." -ForegroundColor Green
-    } else {
-        Write-Host "[!] Scan complete! Found $totalFound suspicious JAR(s)." -ForegroundColor Red
-    }
-    Write-Host ""
-    Read-Host "Press Enter to return to menu"
-    Clear-Host
-    Show-Logo
-    
-} elseif ($choice -eq "3") {
-    Clear-Host
-    Show-Logo
     
     Write-Host "[~] Checking for running Minecraft..." -ForegroundColor Gray
     
@@ -823,14 +831,74 @@ public class MemScanner {
         }
         
         Write-Host ""
-        Write-Host "    [0] Back to menu" -ForegroundColor DarkGray
+        Write-Host "    [0] Custom folder (другая папка)" -ForegroundColor Yellow
+        Write-Host ""
+        Write-Host "    Press Enter to return to menu" -ForegroundColor DarkGray
         Write-Host ""
         
         $folderChoice = Read-Host "Select folder"
         
-        if ($folderChoice -match '^\d+$' -and [int]$folderChoice -gt 0 -and [int]$folderChoice -le $modsFolders.Count) {
-            $selectedFolder = $modsFolders[[int]$folderChoice - 1]
+        # Если пустой ввод (Enter) - возврат в меню
+        if ([string]::IsNullOrWhiteSpace($folderChoice)) {
+            Clear-Host
+            Show-Logo
+            continue
+        }
+        
+        # Проверка на кастомную папку [0]
+        if ($folderChoice -eq "0") {
+            Write-Host ""
+            Write-Host "    Enter custom mods folder path:" -ForegroundColor Yellow
+            Write-Host ""
+            $customPath = Read-Host "    Path"
             
+            # Если пустой ввод - возврат в меню
+            if ([string]::IsNullOrWhiteSpace($customPath)) {
+                Clear-Host
+                Show-Logo
+                continue
+            }
+            
+            # Проверяем существует ли путь
+            if (Test-Path $customPath) {
+                # Проверяем есть ли там JAR файлы
+                $testJars = Get-ChildItem -Path $customPath -Filter "*.jar" -ErrorAction SilentlyContinue
+                
+                if ($testJars.Count -gt 0) {
+                    $selectedFolder = $customPath
+                    Write-Host ""
+                    Write-Host "    [✓] Found $($testJars.Count) JAR file(s) in custom folder" -ForegroundColor Green
+                    Write-Host ""
+                } else {
+                    Write-Host ""
+                    Write-Host "    [!] No JAR files found in this folder!" -ForegroundColor Red
+                    Write-Host ""
+                    Read-Host "Press Enter to return"
+                    Clear-Host
+                    Show-Logo
+                    continue
+                }
+            } else {
+                Write-Host ""
+                Write-Host "    [!] Path not found: $customPath" -ForegroundColor Red
+                Write-Host ""
+                Read-Host "Press Enter to return"
+                Clear-Host
+                Show-Logo
+                continue
+            }
+        }
+        elseif ($folderChoice -match '^\d+$' -and [int]$folderChoice -gt 0 -and [int]$folderChoice -le $modsFolders.Count) {
+            $selectedFolder = $modsFolders[[int]$folderChoice - 1]
+        }
+        else {
+            Clear-Host
+            Show-Logo
+            continue
+        }
+        
+        # Общий блок сканирования для выбранной папки
+        if ($selectedFolder) {
             Write-Host ""
             Write-Host "[~] Scanning: $selectedFolder" -ForegroundColor Gray
             Write-Host ""
@@ -1406,125 +1474,10 @@ public class MemScanner {
             Read-Host "Press Enter to return to menu"
             Clear-Host
             Show-Logo
-            
-        } elseif ($folderChoice -eq "0") {
-            Clear-Host
-            Show-Logo
-        } else {
-            Write-Host ""
-            Write-Host "    Invalid choice!" -ForegroundColor Red
-            Start-Sleep -Seconds 1
-            Clear-Host
-            Show-Logo
-        }
+        }  # Закрываем if ($selectedFolder)
     }
     
-} elseif ($choice -eq "4") {
-    Clear-Host
-    Show-Logo
-    Write-Host "  ╔═════════════════════════════════════════════════════════════════════════╗" -ForegroundColor Gray
-    Write-Host "  ║ DLL CHECK                                                               ║" -ForegroundColor Gray
-    Write-Host "  ╚═════════════════════════════════════════════════════════════════════════╝" -ForegroundColor Gray
-    Write-Host ""
-    
-    $totalFound = 0
-    
-    # Прогресс бар
-    $barLength = 50
-    Write-Host "  Scanning DLLs... " -NoNewline -ForegroundColor Gray
-    for ($i = 0; $i -le $barLength; $i++) {
-        $percent = [math]::Round(($i / $barLength) * 100)
-        $bar = "█" * $i + "░" * ($barLength - $i)
-        Write-Host "`r  Scanning DLLs... [$bar] $percent%" -NoNewline -ForegroundColor Gray
-        Start-Sleep -Milliseconds 30
-    }
-    # Очищаем строку загрузки
-    Write-Host "`r$(' ' * 80)" -NoNewline
-    Write-Host "`r" -NoNewline
-    Write-Host ""
-    Write-Host ""
-    
-    $totalFound = 0
-    
-    # Suspicious DLLs blacklist
-    $suspiciousDlls = @(
-        'WLDAP32.dll',
-        'wldap32.dll'
-    )
-    
-    $javawProcesses = Get-Process -Name javaw -ErrorAction SilentlyContinue
-    $pulseProcesses = Get-Process -Name pulse_launcher -ErrorAction SilentlyContinue
-    
-    # Объединяем оба процесса
-    $allProcesses = @()
-    if ($javawProcesses) { $allProcesses += $javawProcesses }
-    if ($pulseProcesses) { $allProcesses += $pulseProcesses }
-    
-    if ($allProcesses.Count -gt 0) {
-        foreach ($proc in $allProcesses) {
-            $processName = $proc.ProcessName
-            $displayName = if ($processName -eq "pulse_launcher") { "pulse_launcher.exe" } else { "javaw.exe" }
-            $memoryMB = [math]::Round($proc.WorkingSet64 / 1MB, 2)
-            $memoryGB = [math]::Round($proc.WorkingSet64 / 1GB, 2)
-            $startTime = $proc.StartTime.ToString("HH:mm:ss")
-            
-            # Пропускаем javaw с памятью < 1 GB
-            if ($memoryGB -lt 1) {
-                continue
-            }
-            
-            Write-Host "  ┌─────────────────────────────────────────────────────────────────" -ForegroundColor Gray
-            Write-Host "  │ [PID $($proc.Id)] $displayName | $memoryMB MB | Started: $startTime" -ForegroundColor Gray
-            Write-Host "  └─────────────────────────────────────────────────────────────────" -ForegroundColor Gray
-            Write-Host ""
-            
-            $foundSuspicious = @()
-            
-            try {
-                $modules = Get-Process -Id $proc.Id | Select-Object -ExpandProperty Modules -ErrorAction Stop
-                
-                foreach ($module in $modules) {
-                    $dllName = $module.ModuleName
-                    
-                    if ($suspiciousDlls -contains $dllName) {
-                        $foundSuspicious += $dllName
-                    }
-                }
-                
-                if ($foundSuspicious.Count -gt 0) {
-                    Write-Host "  ├─ Status: ⚠️  FOUND (CORTEX detected)" -ForegroundColor Red
-                    Write-Host "  │" -ForegroundColor Gray
-                    foreach ($dll in $foundSuspicious) {
-                        Write-Host "  │ • $dll" -ForegroundColor Gray
-                    }
-                    $totalFound++
-                } else {
-                    Write-Host "  ├─ Status: ✅ CLEAN" -ForegroundColor Green
-                }
-                
-            } catch {
-                Write-Host "  ├─ Status: ⚠️  Access Denied" -ForegroundColor Yellow
-            }
-            
-            Write-Host ""
-        }
-        
-    } else {
-        Write-Host "    No javaw.exe processes running" -ForegroundColor Gray
-    }
-    
-    Write-Host ""
-    if ($totalFound -eq 0) {
-        Write-Host "[+] Scan complete! No suspicious DLLs detected." -ForegroundColor Green
-    } else {
-        Write-Host "[!] Scan complete! Found $totalFound suspicious DLL(s)." -ForegroundColor Red
-    }
-    Write-Host ""
-    Read-Host "Press Enter to return to menu"
-    Clear-Host
-    Show-Logo
-    
-} elseif ($choice -eq "5") {
+} elseif ($choice -eq "3") {
     Clear-Host
     Show-Logo
     
@@ -1879,7 +1832,7 @@ public class MemScanner {
     Clear-Host
     Show-Logo
     
-} elseif ($choice -eq "6") {
+} elseif ($choice -eq "4") {
     Clear-Host
     Show-Logo
     
@@ -2449,6 +2402,617 @@ public class MemScanner {
     Read-Host "Press Enter to return to menu"
     Clear-Host
     Show-Logo
+    
+} elseif ($choice -eq "5") {
+    Clear-Host
+    Show-Logo
+    
+    Write-Host ""
+    Write-Host "  ╔═══════════════════════════════════════════════════════════════════════════╗" -ForegroundColor Gray
+    Write-Host "  ║                         CHEAT DETECT                                      ║" -ForegroundColor Gray
+    Write-Host "  ╚═══════════════════════════════════════════════════════════════════════════╝" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "  Select cheat to detect:" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "    [1] SystemDLC" -ForegroundColor White
+    Write-Host "    [2] Liminar" -ForegroundColor White
+    Write-Host ""
+    Write-Host "    [0] Back to main menu" -ForegroundColor DarkGray
+    Write-Host ""
+    
+    $cheatChoice = Read-Host "Enter choice"
+    
+    if ($cheatChoice -eq "1") {
+        # SystemDLC Detection (код который уже есть)
+        Clear-Host
+        Show-Logo
+        
+        Write-Host ""
+        Write-Host "  ╔═══════════════════════════════════════════════════════════════════════════╗" -ForegroundColor Gray
+        Write-Host "  ║                    CHEAT DETECT: SystemDLC                                ║" -ForegroundColor Gray
+        Write-Host "  ╚═══════════════════════════════════════════════════════════════════════════╝" -ForegroundColor Gray
+        Write-Host ""
+        
+        $detectionScore = 0
+        $maxScore = 115
+        $evidenceFound = @()
+        
+        Write-Host "  [~] Analyzing system for SystemDLC indicators..." -ForegroundColor Gray
+        Write-Host ""
+    
+    # =====================================================================
+    # ПРОВЕРКА 1: IDLE.EXE рядом с ПОСЛЕДНИМ javaw.exe (+25%)
+    # =====================================================================
+    Write-Host "  [1/5] Checking for suspicious processes (idle + javaw)..." -ForegroundColor Gray
+    
+    $javawProcesses = Get-Process -Name javaw -ErrorAction SilentlyContinue
+    
+    # Находим ПОСЛЕДНИЙ (самый новый) javaw процесс
+    $lastJavaw = $null
+    if ($javawProcesses) {
+        if ($javawProcesses.Count -gt 1) {
+            # Сортируем по StartTime и берем последний
+            $lastJavaw = $javawProcesses | Sort-Object StartTime -Descending | Select-Object -First 1
+            Write-Host "    [~] Found $($javawProcesses.Count) javaw processes, checking latest one (PID: $($lastJavaw.Id))" -ForegroundColor Gray
+        } else {
+            $lastJavaw = $javawProcesses
+            Write-Host "    [~] Found 1 javaw process (PID: $($lastJavaw.Id))" -ForegroundColor Gray
+        }
+    }
+    
+    $idleRunning = Get-Process -Name idle -ErrorAction SilentlyContinue
+    $pythonRunning = Get-Process -Name python, pythonw -ErrorAction SilentlyContinue
+    
+    # Проверка одновременного запуска с ПОСЛЕДНИМ javaw
+    if ($lastJavaw -and ($idleRunning -or $pythonRunning)) {
+        $javawStartTime = $lastJavaw.StartTime
+        
+        # Проверяем что Python/idle запущены ПОСЛЕ или примерно в то же время что javaw
+        $suspiciousProcesses = @()
+        
+        if ($idleRunning) {
+            foreach ($idle in $idleRunning) {
+                $timeDiff = ($idle.StartTime - $javawStartTime).TotalMinutes
+                # Если idle запущен в пределах ±60 минут от javaw
+                if ([Math]::Abs($timeDiff) -le 60) {
+                    $suspiciousProcesses += @{Name="idle.exe"; PID=$idle.Id; TimeDiff=$timeDiff}
+                }
+            }
+        }
+        
+        if ($pythonRunning) {
+            foreach ($py in $pythonRunning) {
+                $timeDiff = ($py.StartTime - $javawStartTime).TotalMinutes
+                if ([Math]::Abs($timeDiff) -le 60) {
+                    $suspiciousProcesses += @{Name="$($py.Name).exe"; PID=$py.Id; TimeDiff=$timeDiff}
+                }
+            }
+        }
+        
+        if ($suspiciousProcesses.Count -gt 0) {
+            $detectionScore += 25
+            Write-Host "    [!] DETECTED: Suspicious processes running near latest javaw.exe" -ForegroundColor Red
+            Write-Host "        Latest javaw started: $($javawStartTime.ToString('HH:mm:ss'))" -ForegroundColor Yellow
+            
+            foreach ($proc in $suspiciousProcesses) {
+                $diffText = if ($proc.TimeDiff -gt 0) {
+                    "$([Math]::Round($proc.TimeDiff, 1)) min AFTER"
+                } else {
+                    "$([Math]::Abs([Math]::Round($proc.TimeDiff, 1))) min BEFORE"
+                }
+                Write-Host "        • $($proc.Name) (PID $($proc.PID)): $diffText javaw" -ForegroundColor Yellow
+                $evidenceFound += "$($proc.Name) running $diffText javaw.exe"
+            }
+            
+            Write-Host "        SystemDLC: $detectionScore%" -ForegroundColor Red
+        } else {
+            Write-Host "    [✓] Python/IDLE processes found but outside suspicious time window" -ForegroundColor Green
+        }
+    } else {
+        if (-not $lastJavaw) {
+            Write-Host "    [✓] No javaw.exe process running" -ForegroundColor Green
+        } else {
+            Write-Host "    [✓] No suspicious process combination detected" -ForegroundColor Green
+        }
+    }
+    
+    # Дополнительная проверка: Prefetch файлы (если процессы не найдены, но были недавно)
+    if ($detectionScore -eq 0) {
+        Write-Host ""
+        Write-Host "    [~] Checking Prefetch for recent activity..." -ForegroundColor Gray
+        
+        try {
+            $javawPrefetch = Get-ChildItem "C:\Windows\Prefetch" -Filter "JAVAW*.pf" -ErrorAction SilentlyContinue | 
+                Sort-Object LastWriteTime -Descending | Select-Object -First 1
+            
+            if ($javawPrefetch) {
+                $javawLastTime = $javawPrefetch.LastWriteTime
+                
+                $pythonPrefetch = Get-ChildItem "C:\Windows\Prefetch" -Filter "PYTHON*.pf" -ErrorAction SilentlyContinue | 
+                    Where-Object { 
+                        $timeDiff = ($_.LastWriteTime - $javawLastTime).TotalMinutes
+                        [Math]::Abs($timeDiff) -le 60
+                    }
+                
+                $idlePrefetch = Get-ChildItem "C:\Windows\Prefetch" -Filter "IDLE*.pf" -ErrorAction SilentlyContinue | 
+                    Where-Object { 
+                        $timeDiff = ($_.LastWriteTime - $javawLastTime).TotalMinutes
+                        [Math]::Abs($timeDiff) -le 60
+                    }
+                
+                $pythonwPrefetch = Get-ChildItem "C:\Windows\Prefetch" -Filter "PYTHONW*.pf" -ErrorAction SilentlyContinue | 
+                    Where-Object { 
+                        $timeDiff = ($_.LastWriteTime - $javawLastTime).TotalMinutes
+                        [Math]::Abs($timeDiff) -le 60
+                    }
+                
+                if ($pythonPrefetch -or $idlePrefetch -or $pythonwPrefetch) {
+                    $detectionScore += 15
+                    Write-Host "    [!] DETECTED: Python/IDLE ran within 1 hour of javaw (Prefetch evidence)" -ForegroundColor Red
+                    Write-Host "        Last javaw: $($javawLastTime.ToString('HH:mm:ss dd.MM.yyyy'))" -ForegroundColor Yellow
+                    
+                    if ($pythonPrefetch) {
+                        $pythonTime = ($pythonPrefetch | Select-Object -First 1).LastWriteTime
+                        $diff = [Math]::Round(($pythonTime - $javawLastTime).TotalMinutes, 1)
+                        Write-Host "        python.exe: $diff minutes apart" -ForegroundColor Yellow
+                    }
+                    if ($pythonwPrefetch) {
+                        $pythonwTime = ($pythonwPrefetch | Select-Object -First 1).LastWriteTime
+                        $diff = [Math]::Round(($pythonwTime - $javawLastTime).TotalMinutes, 1)
+                        Write-Host "        pythonw.exe: $diff minutes apart" -ForegroundColor Yellow
+                    }
+                    if ($idlePrefetch) {
+                        $idleTime = ($idlePrefetch | Select-Object -First 1).LastWriteTime
+                        $diff = [Math]::Round(($idleTime - $javawLastTime).TotalMinutes, 1)
+                        Write-Host "        idle.exe: $diff minutes apart" -ForegroundColor Yellow
+                    }
+                    
+                    $evidenceFound += "Python/IDLE executed within 1 hour of javaw (Prefetch)"
+                    Write-Host "        SystemDLC: $detectionScore%" -ForegroundColor Red
+                }
+            }
+        } catch { }
+    }
+    
+    Write-Host ""
+    
+    # =====================================================================
+    # ПРОВЕРКА 2: systemdlc.com в истории браузера (+25%)
+    # =====================================================================
+    Write-Host "  [2/4] Checking browser history for systemdlc.com..." -ForegroundColor Gray
+    
+    $foundInBrowser = $false
+    $browsersWithSite = @()
+    
+    $browserPaths = @(
+        @{Name="Chrome"; Path="$env:LOCALAPPDATA\Google\Chrome\User Data\Default\History"},
+        @{Name="Edge"; Path="$env:LOCALAPPDATA\Microsoft\Edge\User Data\Default\History"},
+        @{Name="Opera"; Path="$env:APPDATA\Opera Software\Opera Stable\Default\History"},
+        @{Name="Opera GX"; Path="$env:APPDATA\Opera Software\Opera GX Stable\Default\History"},
+        @{Name="Yandex"; Path="$env:LOCALAPPDATA\Yandex\YandexBrowser\User Data\Default\History"},
+        @{Name="Brave"; Path="$env:LOCALAPPDATA\BraveSoftware\Brave-Browser\User Data\Default\History"}
+    )
+    
+    foreach ($browser in $browserPaths) {
+        if (Test-Path $browser.Path) {
+            try {
+                $bytes = [System.IO.File]::ReadAllBytes($browser.Path)
+                $text = [System.Text.Encoding]::UTF8.GetString($bytes)
+                
+                if ($text -match 'systemdlc') {
+                    $foundInBrowser = $true
+                    $browsersWithSite += $browser.Name
+                }
+            } catch {
+                # Файл заблокирован, пробуем через FileStream
+                try {
+                    $fileStream = [System.IO.File]::Open($browser.Path, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::ReadWrite)
+                    $fileBytes = New-Object byte[] $fileStream.Length
+                    $fileStream.Read($fileBytes, 0, $fileStream.Length) | Out-Null
+                    $fileStream.Close()
+                    
+                    $text = [System.Text.Encoding]::UTF8.GetString($fileBytes)
+                    
+                    if ($text -match 'systemdlc') {
+                        $foundInBrowser = $true
+                        $browsersWithSite += $browser.Name
+                    }
+                } catch { }
+            }
+        }
+    }
+    
+    if ($foundInBrowser) {
+        $detectionScore += 25
+        Write-Host "    [!] DETECTED: systemdlc.com in browser history [$($browsersWithSite -join ', ')]" -ForegroundColor Red
+        Write-Host "        SystemDLC: $detectionScore%" -ForegroundColor Red
+        $evidenceFound += "systemdlc.com in browser history ($($browsersWithSite -join ', '))"
+    } else {
+        Write-Host "    [✓] No systemdlc.com visits found" -ForegroundColor Green
+    }
+    
+    Write-Host ""
+    
+    # =====================================================================
+    # ПРОВЕРКА 3: Сохраненный аккаунт на systemdlc.com (+25%)
+    # =====================================================================
+    Write-Host "  [3/4] Checking for saved systemdlc.com account..." -ForegroundColor Gray
+    
+    $accountFound = $false
+    $accountBrowsers = @()
+    
+    $loginDataPaths = @(
+        @{Name="Chrome"; Path="$env:LOCALAPPDATA\Google\Chrome\User Data\Default\Login Data"},
+        @{Name="Edge"; Path="$env:LOCALAPPDATA\Microsoft\Edge\User Data\Default\Login Data"},
+        @{Name="Opera"; Path="$env:APPDATA\Opera Software\Opera Stable\Default\Login Data"},
+        @{Name="Opera GX"; Path="$env:APPDATA\Opera Software\Opera GX Stable\Default\Login Data"},
+        @{Name="Yandex"; Path="$env:LOCALAPPDATA\Yandex\YandexBrowser\User Data\Default\Ya Passman Data"},
+        @{Name="Brave"; Path="$env:LOCALAPPDATA\BraveSoftware\Brave-Browser\User Data\Default\Login Data"}
+    )
+    
+    foreach ($browser in $loginDataPaths) {
+        if (Test-Path $browser.Path) {
+            try {
+                $tempFile = Join-Path $env:TEMP "login_temp_$(Get-Random).db"
+                
+                # Пробуем скопировать
+                try {
+                    Copy-Item -Path $browser.Path -Destination $tempFile -Force -ErrorAction Stop
+                } catch {
+                    # Используем FileStream для обхода блокировки
+                    $fileStream = [System.IO.File]::Open($browser.Path, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::ReadWrite)
+                    $fileBytes = New-Object byte[] $fileStream.Length
+                    $fileStream.Read($fileBytes, 0, $fileStream.Length) | Out-Null
+                    $fileStream.Close()
+                    [System.IO.File]::WriteAllBytes($tempFile, $fileBytes)
+                }
+                
+                Start-Sleep -Milliseconds 100
+                
+                # Читаем через SQLite
+                try {
+                    $connection = New-Object System.Data.SQLite.SQLiteConnection("Data Source=$tempFile;Version=3;Read Only=True;")
+                    $connection.Open()
+                    
+                    $command = $connection.CreateCommand()
+                    $command.CommandText = "SELECT origin_url FROM logins WHERE origin_url LIKE '%systemdlc%'"
+                    
+                    $reader = $command.ExecuteReader()
+                    
+                    if ($reader.Read()) {
+                        $accountFound = $true
+                        $accountBrowsers += $browser.Name
+                    }
+                    
+                    $reader.Close()
+                    $connection.Close()
+                } catch {
+                    # SQLite не сработал, пробуем сырое чтение
+                    $bytes = [System.IO.File]::ReadAllBytes($tempFile)
+                    $text = [System.Text.Encoding]::UTF8.GetString($bytes)
+                    
+                    if ($text -match 'systemdlc') {
+                        $accountFound = $true
+                        $accountBrowsers += $browser.Name
+                    }
+                }
+                
+                Remove-Item -Path $tempFile -Force -ErrorAction SilentlyContinue
+            } catch { }
+        }
+    }
+    
+    if ($accountFound) {
+        $detectionScore += 25
+        Write-Host "    [!] DETECTED: Saved account for systemdlc.com [$($accountBrowsers -join ', ')]" -ForegroundColor Red
+        Write-Host "        SystemDLC: $detectionScore%" -ForegroundColor Red
+        $evidenceFound += "Saved login credentials for systemdlc.com"
+    } else {
+        Write-Host "    [✓] No saved accounts found" -ForegroundColor Green
+    }
+    
+    Write-Host ""
+    
+    # =====================================================================
+    # ПРОВЕРКА 4: Поиск файлов с [SELF_MAP] (+25%)
+    # =====================================================================
+    Write-Host "  [4/4] Searching for [SELF_MAP] files..." -ForegroundColor Gray
+    Write-Host "    [~] Criteria: Modified in last 30 days, size 2-40 MB, contains [SELF_MAP]" -ForegroundColor Gray
+    
+    $selfMapFound = $false
+    $selfMapFiles = @()
+    
+    try {
+        $searchPaths = @(
+            "$env:USERPROFILE\Downloads",
+            "$env:USERPROFILE\Documents",
+            "$env:USERPROFILE\Desktop",
+            "$env:LOCALAPPDATA",
+            "$env:APPDATA",
+            "$env:TEMP"
+        )
+        
+        foreach ($path in $searchPaths) {
+            if (Test-Path $path) {
+                try {
+                    Write-Host "    [~] Scanning $path..." -ForegroundColor Gray
+                    
+                    # Ищем файлы: младше 30 дней, размер 2-40 MB (ограничиваем глубину поиска)
+                    $files = Get-ChildItem -Path $path -Recurse -File -ErrorAction SilentlyContinue -Depth 3 |
+                        Where-Object {
+                            $_.LastWriteTime -gt (Get-Date).AddDays(-30) -and
+                            $_.Length -ge 2MB -and
+                            $_.Length -le 40MB
+                        } | Select-Object -First 100
+                    
+                    foreach ($file in $files) {
+                        try {
+                            # Читаем файл порциями для поиска [SELF_MAP]
+                            $stream = [System.IO.File]::OpenRead($file.FullName)
+                            $found = $false
+                            $chunkSize = 512KB
+                            $maxChunks = 5  # Максимум 2.5 MB проверяем
+                            
+                            for ($i = 0; $i -lt $maxChunks -and $stream.Position -lt $stream.Length; $i++) {
+                                $bufferSize = [Math]::Min($chunkSize, $stream.Length - $stream.Position)
+                                $buffer = New-Object byte[] $bufferSize
+                                $stream.Read($buffer, 0, $buffer.Length) | Out-Null
+                                
+                                # Проверяем UTF8
+                                $text = [System.Text.Encoding]::UTF8.GetString($buffer)
+                                if ($text -match '\[SELF_MAP\]') {
+                                    $found = $true
+                                    break
+                                }
+                                
+                                # Проверяем ASCII если UTF8 не нашёл
+                                $text = [System.Text.Encoding]::ASCII.GetString($buffer)
+                                if ($text -match '\[SELF_MAP\]') {
+                                    $found = $true
+                                    break
+                                }
+                            }
+                            
+                            $stream.Close()
+                            
+                            if ($found) {
+                                $selfMapFound = $true
+                                $selfMapFiles += @{
+                                    Name = $file.Name
+                                    Path = $file.FullName
+                                    Size = [math]::Round($file.Length / 1MB, 2)
+                                    Modified = $file.LastWriteTime
+                                }
+                            }
+                        } catch {
+                            # Закрываем stream в случае ошибки
+                            if ($stream) { $stream.Close() }
+                        }
+                    }
+                } catch { }
+            }
+        }
+        
+        if ($selfMapFound) {
+            $detectionScore += 25
+            Write-Host ""
+            Write-Host "    [!] DETECTED: Found $($selfMapFiles.Count) file(s) with [SELF_MAP]" -ForegroundColor Red
+            Write-Host "        SystemDLC: $detectionScore%" -ForegroundColor Red
+            
+            foreach ($file in $selfMapFiles) {
+                Write-Host ""
+                Write-Host "        📁 File: $($file.Name)" -ForegroundColor Yellow
+                Write-Host "           Path: $($file.Path)" -ForegroundColor Gray
+                Write-Host "           Size: $($file.Size) MB" -ForegroundColor Gray
+                Write-Host "           Modified: $($file.Modified.ToString('dd.MM.yyyy HH:mm:ss'))" -ForegroundColor Gray
+            }
+            
+            $evidenceFound += "[SELF_MAP] files found: $($selfMapFiles.Count)"
+        } else {
+            Write-Host "    [✓] No [SELF_MAP] files found" -ForegroundColor Green
+        }
+        
+    } catch {
+        Write-Host "    [?] Could not complete [SELF_MAP] search" -ForegroundColor Yellow
+    }
+    
+    Write-Host ""
+    Write-Host "  ═══════════════════════════════════════════════════════════════════════════" -ForegroundColor Gray
+    Write-Host ""
+    
+    # =====================================================================
+    # ФИНАЛЬНЫЙ РЕЗУЛЬТАТ
+    # =====================================================================
+    
+    $color = "Green"
+    $statusIcon = "✓"
+    $statusText = "CLEAN"
+    $riskLevel = "LOW"
+    
+    if ($detectionScore -ge 75) {
+        $color = "Red"
+        $statusIcon = "✗"
+        $statusText = "VERY HIGH PROBABILITY"
+        $riskLevel = "CRITICAL"
+    } elseif ($detectionScore -ge 50) {
+        $color = "Red"
+        $statusIcon = "!"
+        $statusText = "HIGH PROBABILITY"
+        $riskLevel = "HIGH"
+    } elseif ($detectionScore -ge 25) {
+        $color = "Yellow"
+        $statusIcon = "!"
+        $statusText = "SUSPICIOUS"
+        $riskLevel = "MEDIUM"
+    }
+    
+    Write-Host "  ╔═══════════════════════════════════════════════════════════════════════════╗" -ForegroundColor $color
+    Write-Host "  ║                      DETECTION RESULT                                     ║" -ForegroundColor $color
+    Write-Host "  ╚═══════════════════════════════════════════════════════════════════════════╝" -ForegroundColor $color
+    Write-Host ""
+    Write-Host "  [$statusIcon] SystemDLC Detection Score: $detectionScore% / $maxScore%" -ForegroundColor $color
+    Write-Host "  Status: $statusText" -ForegroundColor $color
+    Write-Host "  Risk Level: $riskLevel" -ForegroundColor $color
+    Write-Host ""
+    
+    if ($evidenceFound.Count -gt 0) {
+        Write-Host "  📋 Evidence Found:" -ForegroundColor Yellow
+        foreach ($evidence in $evidenceFound) {
+            Write-Host "    • $evidence" -ForegroundColor White
+        }
+        Write-Host ""
+    }
+    
+    # Рекомендации
+    if ($detectionScore -ge 50) {
+        Write-Host "  ⚠️  WARNING:" -ForegroundColor Red
+        Write-Host "    High probability of SystemDLC usage detected!" -ForegroundColor Red
+        Write-Host "    Multiple indicators suggest the player may be using this cheat." -ForegroundColor Yellow
+        Write-Host ""
+    } elseif ($detectionScore -ge 25) {
+        Write-Host "  ⚠️  CAUTION:" -ForegroundColor Yellow
+        Write-Host "    Some suspicious indicators detected." -ForegroundColor Yellow
+        Write-Host "    Further investigation recommended." -ForegroundColor Gray
+        Write-Host ""
+    }
+    
+    Write-Host "  ═══════════════════════════════════════════════════════════════════════════" -ForegroundColor Gray
+    Write-Host ""
+    
+    Read-Host "Press Enter to return to menu"
+    Clear-Host
+    Show-Logo
+    
+    } elseif ($cheatChoice -eq "2") {
+        # Liminar Detection
+        Clear-Host
+        Show-Logo
+        
+        Write-Host ""
+        Write-Host "  ╔═══════════════════════════════════════════════════════════════════════════╗" -ForegroundColor Gray
+        Write-Host "  ║                      CHEAT DETECT: Liminar                                ║" -ForegroundColor Gray
+        Write-Host "  ╚═══════════════════════════════════════════════════════════════════════════╝" -ForegroundColor Gray
+        Write-Host ""
+        
+        Write-Host "  [~] Searching for Liminar evidence..." -ForegroundColor Gray
+        Write-Host ""
+        
+        $liminarDetected = $false
+        $backupJsonFiles = @()
+        
+        # Ищем backup.json только в конкретных папках
+        Write-Host "  [1/1] Searching for backup.json files (last 30 days)..." -ForegroundColor Gray
+        Write-Host ""
+        
+        $searchPaths = @(
+            "$env:USERPROFILE",
+            "$env:LOCALAPPDATA",
+            "$env:APPDATA",
+            "$env:LOCALAPPDATA\..\LocalLow\uTorrent\configs"
+        )
+        
+        $suspiciousKeywords = @(
+            'aimassist',
+            'triggerbot', 
+            'airstack',
+            'airstak',
+            'killaura',
+            'velocity',
+            'antiknockback',
+            'reach',
+            'autoclicker'
+        )
+        
+        foreach ($path in $searchPaths) {
+            $resolvedPath = [System.IO.Path]::GetFullPath($path)
+            
+            if (Test-Path $resolvedPath) {
+                try {
+                    Write-Host "    [~] Scanning $resolvedPath..." -ForegroundColor Gray
+                    
+                    # Ищем backup.json только в корне папки (не рекурсивно)
+                    $backupFile = Join-Path $resolvedPath "backup.json"
+                    
+                    if (Test-Path $backupFile) {
+                        $file = Get-Item $backupFile
+                        
+                        # Проверяем что файл младше 30 дней
+                        if ($file.LastWriteTime -gt (Get-Date).AddDays(-30)) {
+                            try {
+                                $content = Get-Content -Path $file.FullName -Raw -ErrorAction SilentlyContinue
+                                
+                                $foundKeywords = @()
+                                foreach ($keyword in $suspiciousKeywords) {
+                                    if ($content -match $keyword) {
+                                        $foundKeywords += $keyword
+                                    }
+                                }
+                                
+                                if ($foundKeywords.Count -gt 0) {
+                                    $backupJsonFiles += @{
+                                        Path = $file.FullName
+                                        LastModified = $file.LastWriteTime
+                                        Keywords = $foundKeywords
+                                    }
+                                }
+                            } catch { }
+                        }
+                    }
+                } catch { }
+            }
+        }
+        
+        Write-Host ""
+        Write-Host "  ═══════════════════════════════════════════════════════════════════════════" -ForegroundColor Gray
+        Write-Host ""
+        
+        if ($backupJsonFiles.Count -gt 0) {
+            $liminarDetected = $true
+            
+            Write-Host "  ╔═══════════════════════════════════════════════════════════════════════════╗" -ForegroundColor Red
+            Write-Host "  ║                          🚨 BAN! LIMINAR DETECTED! 🚨                     ║" -ForegroundColor Red
+            Write-Host "  ╚═══════════════════════════════════════════════════════════════════════════╝" -ForegroundColor Red
+            Write-Host ""
+            Write-Host "  Found $($backupJsonFiles.Count) backup.json file(s) with cheat signatures:" -ForegroundColor Red
+            Write-Host ""
+            
+            foreach ($file in $backupJsonFiles) {
+                Write-Host "    📁 File: $($file.Path)" -ForegroundColor White
+                Write-Host "       Last modified: $($file.LastModified.ToString('dd.MM.yyyy HH:mm:ss'))" -ForegroundColor Gray
+                Write-Host "       Detected keywords: $($file.Keywords -join ', ')" -ForegroundColor Yellow
+                Write-Host ""
+            }
+            
+            Write-Host "  ═══════════════════════════════════════════════════════════════════════════" -ForegroundColor Red
+            Write-Host ""
+            Write-Host "  ⚠️  VERDICT: INSTANT BAN!" -ForegroundColor Red
+            Write-Host ""
+            Write-Host "     Reason: Found Liminar cheat configuration files" -ForegroundColor Red
+            Write-Host "     Evidence: backup.json with cheat modules detected" -ForegroundColor Red
+            Write-Host "     Files age: Less than 30 days old" -ForegroundColor Red
+            Write-Host ""
+            Write-Host "  ═══════════════════════════════════════════════════════════════════════════" -ForegroundColor Red
+            
+        } else {
+            Write-Host "  ╔═══════════════════════════════════════════════════════════════════════════╗" -ForegroundColor Green
+            Write-Host "  ║                              ✓ CLEAN                                      ║" -ForegroundColor Green
+            Write-Host "  ╚═══════════════════════════════════════════════════════════════════════════╝" -ForegroundColor Green
+            Write-Host ""
+            Write-Host "  [✓] No Liminar evidence found" -ForegroundColor Green
+            Write-Host ""
+            Write-Host "     No backup.json files with cheat signatures detected" -ForegroundColor Gray
+            Write-Host ""
+        }
+        
+        Write-Host ""
+        Read-Host "Press Enter to return to menu"
+        Clear-Host
+        Show-Logo
+        
+    } elseif ($cheatChoice -eq "0") {
+        Clear-Host
+        Show-Logo
+    }
     
 } elseif ($choice -eq "0") {
     exit
