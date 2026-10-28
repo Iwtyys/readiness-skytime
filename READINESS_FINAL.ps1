@@ -114,9 +114,20 @@ $progressPanel.Add_Paint({
     $g = $e.Graphics
     $g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
     
-    # Рисуем белую полоску
+    # Рисуем светящуюся белую полоску
     $fillWidth = ($progressPanel.Width * $script:progress) / 100
     if ($fillWidth -gt 0) {
+        # Свечение (glow effect) - несколько слоёв с прозрачностью
+        for ($i = 3; $i -ge 0; $i--) {
+            $glowAlpha = 20 + ($i * 15)
+            $glowBrush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb($glowAlpha, 255, 255, 255))
+            $glowHeight = $progressPanel.Height + ($i * 2)
+            $glowY = -$i
+            $g.FillRectangle($glowBrush, 0, $glowY, $fillWidth, $glowHeight)
+            $glowBrush.Dispose()
+        }
+        
+        # Основная яркая белая полоска
         $brush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::White)
         $g.FillRectangle($brush, 0, 0, $fillWidth, $progressPanel.Height)
         $brush.Dispose()
@@ -744,7 +755,8 @@ public class MemScanner {
         (Join-Path $env:APPDATA 'LabyMod\instances'),
         (Join-Path $env:USERPROFILE '.lunarclient\profiles'),
         (Join-Path $env:USERPROFILE '.cristalix'),
-        'C:\PulseVisuals\game\usermods'
+        'C:\PulseVisuals\game\usermods',
+        'C:\Projects\AtomVisuals\run\mods'
     )
     
     foreach ($path in $searchPaths) {
