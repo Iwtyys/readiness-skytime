@@ -3010,6 +3010,12 @@ public class MemScanner {
         Show-Logo
         
     } elseif ($cheatChoice -eq "0") {
+        # Возврат в главное меню
+        Clear-Host
+        Show-Logo
+        continue
+    } else {
+        # Неверный выбор
         Clear-Host
         Show-Logo
     }
