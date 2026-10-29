@@ -2,7 +2,7 @@
 Add-Type -AssemblyName System.Drawing
 
 # Правильный ключ
-$script:correctKey = "SKYTIME2026"
+$script:correctKey = "Jy2xqlx"
 $script:keyAccepted = $false
 
 # ============================================================================
