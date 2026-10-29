@@ -568,10 +568,7 @@ public class MemScanner {
             "Killaura",
             "KillAura",
             "TriggerBot",
-            "Triggerbot",
-            "Xray",
-            "XRay",
-            "X-Ray"
+            "Triggerbot"
         };
         
         try {
