@@ -26,7 +26,7 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 # Правильный ключ
-$script:correctKey = "Jy2xqlx"
+$script:correctKey = "084"
 $script:keyAccepted = $false
 
 # ============================================================================
