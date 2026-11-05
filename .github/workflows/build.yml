@@ -1,0 +1,45 @@
+name: Build READINESS
+
+on:
+  push:
+    branches: [ main, master ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Install ps2exe
+      shell: powershell
+      run: |
+        Install-Module -Name ps2exe -Force -Scope CurrentUser
+        Import-Module ps2exe
+    
+    - name: Compile READINESS.exe
+      shell: powershell
+      run: |
+        Invoke-ps2exe -inputFile "READINESS_FINAL (1).ps1" -outputFile "READINESS.exe" -title "READINESS v1.7.4 beta" -requireAdmin -noConsole:$false
+    
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: READINESS-exe
+        path: READINESS.exe
+    
+    - name: Create Release (on tag)
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: READINESS.exe
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
