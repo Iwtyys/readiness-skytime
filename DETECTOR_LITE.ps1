@@ -307,8 +307,6 @@ while ($true) {
     Read-Host "Press Enter to return to menu"
     Clear-Host
     Show-Logo
-    
-
 
 # ============================================================================
 # SECTION 2: MODS ANALYZER
