@@ -466,101 +466,65 @@ if ($choice -eq "1") {
                 $suspiciousMods = @()
                 $processedCount = 0
                 
+                Write-Host "  Scanning..." -ForegroundColor Gray
+                
                 foreach ($jar in $jarFiles) {
                     $processedCount++
-                    Write-Host "  [$processedCount/$($jarFiles.Count)] Analyzing: $($jar.Name)" -ForegroundColor Gray
-                    
                     $isSuspicious = $false
                     $reason = ""
-                    $detailsFound = @()
+                    $cheatClassesFound = @()
                     
-                    # Check filename
-                    Write-Host "    -> Checking filename..." -ForegroundColor DarkGray
                     foreach ($cheatString in $cheatStrings) {
                         if ($jar.Name -match $cheatString) {
                             $isSuspicious = $true
-                            $reason = "Suspicious pattern in name: $cheatString"
-                            $detailsFound += "Pattern: $cheatString"
-                            Write-Host "      [!] Found pattern: $cheatString" -ForegroundColor Yellow
+                            $reason = "Cheat pattern in filename"
                             break
                         }
                     }
                     
-                    # Check file size
-                    if (-not $isSuspicious) {
-                        Write-Host "    -> Checking file size..." -ForegroundColor DarkGray
-                        if ($jar.Length -lt 10KB) {
-                            $isSuspicious = $true
-                            $reason = "Suspiciously small file size ($([math]::Round($jar.Length / 1KB, 2)) KB)"
-                            $detailsFound += "Very small size"
-                            Write-Host "      [!] Suspicious size: $([math]::Round($jar.Length / 1KB, 2)) KB" -ForegroundColor Yellow
-                        }
+                    if ($jar.Length -lt 10KB) {
+                        $isSuspicious = $true
+                        $reason = "Very small size"
                     }
                     
-                    # Check obfuscation
-                    if (-not $isSuspicious) {
-                        Write-Host "    -> Checking for obfuscation..." -ForegroundColor DarkGray
-                        if ($jar.BaseName -match '^[a-z]{1,3}$') {
-                            $isSuspicious = $true
-                            $reason = "Obfuscated name pattern (short random name)"
-                            $detailsFound += "Obfuscated name"
-                            Write-Host "      [!] Obfuscated name detected" -ForegroundColor Yellow
-                        }
+                    if ($jar.BaseName -match '^[a-z]{1,3}$') {
+                        $isSuspicious = $true
+                        $reason = "Obfuscated filename"
                     }
                     
-                    # Deep scan inside JAR
-                    Write-Host "    -> Scanning JAR internal classes..." -ForegroundColor DarkGray
                     try {
                         $zip = [System.IO.Compression.ZipFile]::OpenRead($jar.FullName)
                         
-                        $classCount = 0
-                        $foundCheatClasses = @()
-                        
                         foreach ($entry in $zip.Entries) {
                             if ($entry.FullName -match '\.class$') {
-                                $classCount++
-                                
-                                # Check for cheat class names
                                 foreach ($cheatString in $cheatStrings) {
                                     if ($entry.FullName -match $cheatString) {
-                                        $foundCheatClasses += "$cheatString in $($entry.FullName)"
+                                        if (-not ($cheatClassesFound -contains $cheatString)) {
+                                            $cheatClassesFound += $cheatString
+                                        }
                                         if (-not $isSuspicious) {
                                             $isSuspicious = $true
-                                            $reason = "Cheat classes found inside JAR"
+                                            $reason = "Cheat classes detected"
                                         }
                                     }
                                 }
                             }
                         }
                         
-                        Write-Host "      Total classes: $classCount" -ForegroundColor DarkGray
-                        
-                        if ($foundCheatClasses.Count -gt 0) {
-                            Write-Host "      [!] FOUND $($foundCheatClasses.Count) CHEAT CLASSES:" -ForegroundColor Red
-                            foreach ($cls in $foundCheatClasses) {
-                                Write-Host "        - $cls" -ForegroundColor Red
-                                $detailsFound += $cls
-                            }
-                        }
-                        
                         $zip.Dispose()
-                    } catch {
-                        Write-Host "      Could not scan JAR internals" -ForegroundColor DarkGray
-                    }
+                    } catch { }
                     
                     if ($isSuspicious) {
-                        Write-Host "    [SUSPICIOUS] Added to report" -ForegroundColor Red
                         $suspiciousMods += @{
                             Name = $jar.Name
                             Size = $jar.Length
                             Reason = $reason
-                            Details = $detailsFound
+                            CheatClasses = $cheatClassesFound
                         }
-                    } else {
-                        Write-Host "    [OK] Looks legitimate" -ForegroundColor Green
                     }
-                    Write-Host ""
                 }
+                
+                Write-Host ""
                 
                 Write-Host "  =======================================================================" -ForegroundColor Gray
                 Write-Host ""
@@ -571,13 +535,9 @@ if ($choice -eq "1") {
                     
                     foreach ($mod in $suspiciousMods) {
                         Write-Host "  -> $($mod.Name)" -ForegroundColor Red
-                        Write-Host "    Reason: $($mod.Reason)" -ForegroundColor Yellow
-                        Write-Host "    Size: $([math]::Round($mod.Size / 1KB, 2)) KB" -ForegroundColor Gray
-                        if ($mod.Details) {
-                            Write-Host "    Details found:" -ForegroundColor Yellow
-                            foreach ($detail in $mod.Details) {
-                                Write-Host "      - $detail" -ForegroundColor DarkYellow
-                            }
+                        Write-Host "     $($mod.Reason)" -ForegroundColor Yellow
+                        if ($mod.CheatClasses.Count -gt 0) {
+                            Write-Host "     Cheat classes: $($mod.CheatClasses -join ', ')" -ForegroundColor DarkRed
                         }
                         Write-Host ""
                     }
