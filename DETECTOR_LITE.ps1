@@ -4,15 +4,6 @@
 
 $ErrorActionPreference = "SilentlyContinue"
 
-# Проверка прав администратора
-$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-
-if (-not $isAdmin) {
-    $arguments = "-ExecutionPolicy Bypass -File `"" + $MyInvocation.MyCommand.Path + "`""
-    Start-Process powershell -Verb RunAs -ArgumentList $arguments
-    exit
-}
-
 $Host.UI.RawUI.WindowTitle = 'Detector Lite v1.0'
 $Host.UI.RawUI.BackgroundColor = "Black"
 $Host.UI.RawUI.ForegroundColor = "White"
