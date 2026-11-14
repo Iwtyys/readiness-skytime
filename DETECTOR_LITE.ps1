@@ -84,7 +84,7 @@ if ($choice -eq "1") {
     Write-Host "  Scanning browsers... " -NoNewline -ForegroundColor Gray
     for ($i = 0; $i -le $barLength; $i++) {
         $percent = [math]::Round(($i / $barLength) * 100)
-        $bar = "█" * $i + "░" * ($barLength - $i)
+        $bar = "#" * $i + "." * ($barLength - $i)
         Write-Host "`r  Scanning browsers... [$bar] $percent%" -NoNewline -ForegroundColor Gray
         Start-Sleep -Milliseconds 20
     }
@@ -238,7 +238,7 @@ if ($choice -eq "1") {
         $sortedUrls = $foundUrls.GetEnumerator() | Sort-Object -Property {$_.Value.Count} -Descending
         
         foreach ($entry in $sortedUrls) {
-            Write-Host "    • $($entry.Key)" -ForegroundColor White -NoNewline
+            Write-Host "    - $($entry.Key)" -ForegroundColor White -NoNewline
             Write-Host " - $($entry.Value.Count) visit(s)" -ForegroundColor Red
             Write-Host "      Browser(s): $($entry.Value.Browsers -join ', ')" -ForegroundColor Gray
         }
@@ -246,7 +246,7 @@ if ($choice -eq "1") {
         Write-Host ""
         
     } else {
-        Write-Host "  [✓] NO SUSPICIOUS ACTIVITY DETECTED" -ForegroundColor Green
+        Write-Host "  [OK] NO SUSPICIOUS ACTIVITY DETECTED" -ForegroundColor Green
         Write-Host ""
         Write-Host "    No visits found for known cheat websites." -ForegroundColor Gray
         Write-Host ""
@@ -398,7 +398,7 @@ if ($choice -eq "1") {
                 if ($testJars.Count -gt 0) {
                     $selectedFolder = $customPath
                     Write-Host ""
-                    Write-Host "  [✓] Found $($testJars.Count) JAR file(s)" -ForegroundColor Green
+                    Write-Host "  [OK] Found $($testJars.Count) JAR file(s)" -ForegroundColor Green
                     Write-Host ""
                 } else {
                     Write-Host ""
@@ -495,13 +495,13 @@ if ($choice -eq "1") {
                     Write-Host ""
                     
                     foreach ($mod in $suspiciousMods) {
-                        Write-Host "  → $($mod.Name)" -ForegroundColor Red
+                        Write-Host "  -> $($mod.Name)" -ForegroundColor Red
                         Write-Host "    Reason: $($mod.Reason)" -ForegroundColor Yellow
                         Write-Host "    Size: $([math]::Round($mod.Size / 1KB, 2)) KB" -ForegroundColor Gray
                         Write-Host ""
                     }
                 } else {
-                    Write-Host "  ✓ All mods appear legitimate" -ForegroundColor Green
+                    Write-Host "  [OK] All mods appear legitimate" -ForegroundColor Green
                     Write-Host "    Total mods scanned: $($jarFiles.Count)" -ForegroundColor Gray
                 }
                 
