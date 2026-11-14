@@ -395,12 +395,61 @@ if ($choice -eq "1") {
         }
         
         Write-Host ""
-        Write-Host "    [0] Back to menu" -ForegroundColor DarkGray
+        Write-Host "    [0] Custom folder" -ForegroundColor Yellow
+        Write-Host ""
+        if ($activeModsPath) {
+            Write-Host "    Press Enter to scan active Minecraft folder" -ForegroundColor Green
+        } else {
+            Write-Host "    Press Enter to enter custom folder path" -ForegroundColor Yellow
+        }
         Write-Host ""
         
         $folderChoice = Read-Host "Select folder"
         
-        if ($folderChoice -match '^\d+$' -and [int]$folderChoice -gt 0 -and [int]$folderChoice -le $modsFolders.Count) {
+        # If Enter pressed (empty input)
+        if ([string]::IsNullOrWhiteSpace($folderChoice)) {
+            if ($activeModsPath) {
+                $selectedFolder = $activeModsPath
+                Write-Host ""
+                Write-Host "    [*] Using active Minecraft folder" -ForegroundColor Green
+            } else {
+                Write-Host ""
+                Write-Host "    Enter mods folder path:" -ForegroundColor Yellow
+                $customPath = Read-Host "    Path"
+                
+                if ([string]::IsNullOrWhiteSpace($customPath)) {
+                    Clear-Host
+                    Show-Logo
+                    continue
+                }
+                
+                if (Test-Path $customPath) {
+                    $testJars = Get-ChildItem -Path $customPath -Filter "*.jar" -ErrorAction SilentlyContinue
+                    if ($testJars.Count -gt 0) {
+                        $selectedFolder = $customPath
+                        Write-Host ""
+                        Write-Host "    [OK] Found $($testJars.Count) JAR file(s)" -ForegroundColor Green
+                    } else {
+                        Write-Host ""
+                        Write-Host "    [!] No JAR files found!" -ForegroundColor Red
+                        Write-Host ""
+                        Read-Host "    Press Enter to return"
+                        Clear-Host
+                        Show-Logo
+                        continue
+                    }
+                } else {
+                    Write-Host ""
+                    Write-Host "    [!] Path not found!" -ForegroundColor Red
+                    Write-Host ""
+                    Read-Host "    Press Enter to return"
+                    Clear-Host
+                    Show-Logo
+                    continue
+                }
+            }
+        }
+        elseif ($folderChoice -match '^\d+$' -and [int]$folderChoice -gt 0 -and [int]$folderChoice -le $modsFolders.Count) {
             $selectedFolder = $modsFolders[[int]$folderChoice - 1]
             
             Write-Host ""
@@ -814,7 +863,7 @@ if ($choice -eq "1") {
                     'Recording' = @('ReplayMod','FlashBack')
                     'XRay' = @('XRay','XRayMod','XRayTextures','DiamondGen')
                     'Health' = @('MobHealthBar','HealthBarPlus','Neat','NeatPlus')
-                    'Minimap' = @('Minimap','Voxelmap','Waypoints','JourneyMap')
+                    'Minimap' = @('Minimap','Voxelmap','JourneyMap')
                     'Mechanics' = @('AccurateBlockPlacement','ChunkAnimator','InventoryTotem','TrueSight','ElytraAutoPilot')
                     'Advantage' = @('BetterPvP','InvMove','ChestTracker','UseTracker','UseLogger','AucHelper','AntiInvis','EntityOutliner')
                     'Location' = @('AdvancedCompass')
@@ -979,7 +1028,9 @@ if ($choice -eq "1") {
             Clear-Host
             Show-Logo
             
-        } elseif ($folderChoice -eq "0") {
+        }
+        # Если выбран 0 - кастомная папка
+        elseif ($folderChoice -eq "0") {
             Clear-Host
             Show-Logo
         } else {
