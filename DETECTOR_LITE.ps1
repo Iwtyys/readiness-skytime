@@ -276,7 +276,7 @@ while ($true) {
 
     $choice = Read-Host "Enter choice"
 
-} if ($choice -eq "1") {
+if ($choice -eq "1") {
     Clear-Host
     Show-Logo
     
@@ -1268,5 +1268,7 @@ while ($true) {
     Start-Sleep -Seconds 1
     Clear-Host
     Show-Logo
+}
+
 }
 
