@@ -1,4 +1,4 @@
-# ============================================================================
+﻿# ============================================================================
 # DETECTOR LITE V2 - Browser & Mods Scanner (From READINESS.exe)
 # ============================================================================
 
@@ -49,16 +49,16 @@ while ($true) {
 # SECTION 1: BROWSER HISTORY SCANNER
 # ============================================================================
 
-if ($choice -eq "1") {
+ifelseif ($choice -eq "6") {
     Clear-Host
     Show-Logo
     
-    Write-Host ""
-    Write-Host "  =========================================================================" -ForegroundColor Yellow
-    Write-Host "                    BROWSER HISTORY SCANNER                              " -ForegroundColor Yellow
-    Write-Host "  =========================================================================" -ForegroundColor Yellow
+    Write-Host "  =========================================" -ForegroundColor Gray
+    Write-Host "  |                    BROWSER HISTORY SCANNER                              |" -ForegroundColor Gray
+    Write-Host "  =========================================" -ForegroundColor Gray
     Write-Host ""
     
+    # Список подозрительных сайтов
     $suspiciousSites = @(
         'deltadlc.xyz',
         'wexside.ru',
@@ -71,33 +71,28 @@ if ($choice -eq "1") {
         'nursultan.fun',
         'doomsdayclient.com',
         'fearclient.tilda.ws',
-        'liminarclient.fun',
-        'vapeclient.net',
-        'liquidbounce.net',
-        'wurstclient.net',
-        'meteorclient.com'
+        'liminarclient.fun'
     )
     
-    Write-Host "  [*] Starting browser scan..." -ForegroundColor Cyan
+    # Прогресс бар
+    $barLength = 50
+    Write-Host "  Scanning browsers... " -NoNewline -ForegroundColor Gray
+    for ($i = 0; $i -le $barLength; $i++) {
+        $percent = [math]::Round(($i / $barLength) * 100)
+        $bar = "#" * $i + "." * ($barLength - $i)
+        Write-Host "`r  Scanning browsers... [$bar] $percent%" -NoNewline -ForegroundColor Gray
+        Start-Sleep -Milliseconds 20
+    }
+    # Очищаем строку загрузки
+    Write-Host "`r$(' ' * 80)" -NoNewline
+    Write-Host "`r" -NoNewline
     Write-Host ""
-    Write-Host "  Checking browsers:" -ForegroundColor Gray
-    Write-Host "    - Google Chrome" -ForegroundColor DarkGray
-    Write-Host "    - Microsoft Edge" -ForegroundColor DarkGray
-    Write-Host "    - Opera / Opera GX" -ForegroundColor DarkGray
-    Write-Host "    - Yandex Browser" -ForegroundColor DarkGray
-    Write-Host "    - Brave / Vivaldi" -ForegroundColor DarkGray
-    Write-Host "    - Firefox (all profiles)" -ForegroundColor DarkGray
-    Write-Host ""
-    Write-Host "  Searching for:" -ForegroundColor Gray
-    Write-Host "    - systemdlc.com, deltadlc.xyz, wexside.ru" -ForegroundColor DarkGray
-    Write-Host "    - mhub.fun, cortexclient.com, wildclient.org" -ForegroundColor DarkGray
-    Write-Host "    - liquidbounce.net, wurstclient.net, meteorclient.com" -ForegroundColor DarkGray
-    Write-Host "    - and more cheat sites..." -ForegroundColor DarkGray
     Write-Host ""
     
     $foundUrls = @{}
     $totalFound = 0
     
+    # Функция для поиска URL в истории (скрытно)
     function Search-BrowserHistory {
         param($historyPath, $browserName)
         
@@ -106,9 +101,11 @@ if ($choice -eq "1") {
         }
         
         try {
+            # Копируем файл истории (т.к. браузер может его блокировать)
             $tempHistory = "$env:TEMP\browser_history_temp.db"
             Copy-Item -Path $historyPath -Destination $tempHistory -Force -ErrorAction SilentlyContinue
             
+            # Читаем SQLite базу данных истории
             Add-Type -AssemblyName System.Data
             $connection = New-Object System.Data.SQLite.SQLiteConnection("Data Source=$tempHistory;Version=3;")
             $connection.Open()
@@ -122,20 +119,20 @@ if ($choice -eq "1") {
                 $url = $reader["url"]
                 $visitCount = $reader["visit_count"]
                 
-                foreach ($site in $script:suspiciousSites) {
+                foreach ($site in $suspiciousSites) {
                     if ($url -match $site) {
-                        if ($script:foundUrls.ContainsKey($url)) {
-                            $script:foundUrls[$url].Count += $visitCount
-                            if (-not ($script:foundUrls[$url].Browsers -contains $browserName)) {
-                                $script:foundUrls[$url].Browsers += @($browserName)
+                        if ($foundUrls.ContainsKey($url)) {
+                            $foundUrls[$url].Count += $visitCount
+                            if (-not ($foundUrls[$url].Browsers -contains $browserName)) {
+                                $foundUrls[$url].Browsers += @($browserName)
                             }
                         } else {
-                            $script:foundUrls[$url] = @{
+                            $foundUrls[$url] = @{
                                 Count = $visitCount
                                 Browsers = @($browserName)
                             }
                         }
-                        $script:totalFound++
+                        $totalFound++
                         break
                     }
                 }
@@ -146,31 +143,33 @@ if ($choice -eq "1") {
             Remove-Item -Path $tempHistory -Force -ErrorAction SilentlyContinue
             
         } catch {
+            # Если SQLite не работает, используем простой текстовый поиск
             try {
                 $content = Get-Content -Path $historyPath -Raw -ErrorAction SilentlyContinue
                 
-                foreach ($site in $script:suspiciousSites) {
+                foreach ($site in $suspiciousSites) {
                     $matches = [regex]::Matches($content, [regex]::Escape($site))
                     if ($matches.Count -gt 0) {
                         $url = "https://$site/"
-                        if ($script:foundUrls.ContainsKey($url)) {
-                            $script:foundUrls[$url].Count += $matches.Count
-                            if (-not ($script:foundUrls[$url].Browsers -contains $browserName)) {
-                                $script:foundUrls[$url].Browsers += @($browserName)
+                        if ($foundUrls.ContainsKey($url)) {
+                            $foundUrls[$url].Count += $matches.Count
+                            if (-not ($foundUrls[$url].Browsers -contains $browserName)) {
+                                $foundUrls[$url].Browsers += @($browserName)
                             }
                         } else {
-                            $script:foundUrls[$url] = @{
+                            $foundUrls[$url] = @{
                                 Count = $matches.Count
                                 Browsers = @($browserName)
                             }
                         }
-                        $script:totalFound += $matches.Count
+                        $totalFound += $matches.Count
                     }
                 }
             } catch { }
         }
     }
     
+    # Пути к истории браузеров
     $chromeHistory = "$env:LOCALAPPDATA\Google\Chrome\User Data\Default\History"
     $edgeHistory = "$env:LOCALAPPDATA\Microsoft\Edge\User Data\Default\History"
     $operaHistory = "$env:APPDATA\Opera Software\Opera Stable\History"
@@ -178,27 +177,62 @@ if ($choice -eq "1") {
     $yandexHistory = "$env:LOCALAPPDATA\Yandex\YandexBrowser\User Data\Default\History"
     $braveHistory = "$env:LOCALAPPDATA\BraveSoftware\Brave-Browser\User Data\Default\History"
     $vivaldiHistory = "$env:LOCALAPPDATA\Vivaldi\User Data\Default\History"
+    $torHistory = "$env:APPDATA\Tor Browser\Browser\TorBrowser\Data\Browser\profile.default\places.sqlite"
     $firefoxProfile = "$env:APPDATA\Mozilla\Firefox\Profiles"
     
-    Write-Host "  [~] Scanning Chrome..." -ForegroundColor Gray
+    # Сканируем Chrome
     Search-BrowserHistory -historyPath $chromeHistory -browserName "Google Chrome"
     
-    Write-Host "  [~] Scanning Edge..." -ForegroundColor Gray
+    # Сканируем Edge
     Search-BrowserHistory -historyPath $edgeHistory -browserName "Microsoft Edge"
     
-    Write-Host "  [~] Scanning Opera..." -ForegroundColor Gray
+    # Сканируем Opera
     Search-BrowserHistory -historyPath $operaHistory -browserName "Opera"
+    
+    # Сканируем Opera GX
     Search-BrowserHistory -historyPath $operaGXHistory -browserName "Opera GX"
     
-    Write-Host "  [~] Scanning Yandex..." -ForegroundColor Gray
+    # Сканируем Yandex
     Search-BrowserHistory -historyPath $yandexHistory -browserName "Yandex Browser"
     
-    Write-Host "  [~] Scanning Brave/Vivaldi..." -ForegroundColor Gray
+    # Сканируем Brave
     Search-BrowserHistory -historyPath $braveHistory -browserName "Brave"
+    
+    # Сканируем Vivaldi
     Search-BrowserHistory -historyPath $vivaldiHistory -browserName "Vivaldi"
     
-    # Firefox (РЅРµСЃРєРѕР»СЊРєРѕ РїСЂРѕС„РёР»РµР№)
-    Write-Host "  [~] Scanning Firefox..." -ForegroundColor Gray
+    # Сканируем Tor Browser
+    if (Test-Path $torHistory) {
+        try {
+            $tempHistory = "$env:TEMP\tor_history_temp.db"
+            Copy-Item -Path $torHistory -Destination $tempHistory -Force -ErrorAction SilentlyContinue
+            
+            $content = Get-Content -Path $tempHistory -Raw -ErrorAction SilentlyContinue
+            
+            foreach ($site in $suspiciousSites) {
+                $matches = [regex]::Matches($content, [regex]::Escape($site))
+                if ($matches.Count -gt 0) {
+                    $url = "https://$site/"
+                    if ($foundUrls.ContainsKey($url)) {
+                        $foundUrls[$url].Count += $matches.Count
+                        if (-not ($foundUrls[$url].Browsers -contains "Tor Browser")) {
+                            $foundUrls[$url].Browsers += @("Tor Browser")
+                        }
+                    } else {
+                        $foundUrls[$url] = @{
+                            Count = $matches.Count
+                            Browsers = @("Tor Browser")
+                        }
+                    }
+                    $totalFound += $matches.Count
+                }
+            }
+            
+            Remove-Item -Path $tempHistory -Force -ErrorAction SilentlyContinue
+        } catch { }
+    }
+    
+    # Сканируем Firefox (имеет несколько профилей)
     if (Test-Path $firefoxProfile) {
         $profiles = Get-ChildItem -Path $firefoxProfile -Directory -ErrorAction SilentlyContinue
         foreach ($profile in $profiles) {
@@ -237,16 +271,17 @@ if ($choice -eq "1") {
     
     Write-Host ""
     
+    # Показываем результаты
     if ($foundUrls.Count -gt 0) {
-        Write-Host "  =========================================================================" -ForegroundColor Red
-        Write-Host "                     SUSPICIOUS SITES DETECTED!                          " -ForegroundColor Red
-        Write-Host "  =========================================================================" -ForegroundColor Red
+        Write-Host "  =========================================" -ForegroundColor Red
+        Write-Host "  |                     🚨 SUSPICIOUS SITES DETECTED! 🚨                   |" -ForegroundColor Red
+        Write-Host "  =========================================" -ForegroundColor Red
         Write-Host ""
         
         $sortedUrls = $foundUrls.GetEnumerator() | Sort-Object -Property {$_.Value.Count} -Descending
         
         foreach ($entry in $sortedUrls) {
-            Write-Host "    - $($entry.Key)" -ForegroundColor White -NoNewline
+            Write-Host "    • $($entry.Key)" -ForegroundColor White -NoNewline
             Write-Host " - $($entry.Value.Count) visit(s)" -ForegroundColor Red
             Write-Host "      Browser(s): $($entry.Value.Browsers -join ', ')" -ForegroundColor Gray
         }
@@ -254,22 +289,27 @@ if ($choice -eq "1") {
         Write-Host ""
         
     } else {
-        Write-Host "  [OK] NO SUSPICIOUS ACTIVITY DETECTED" -ForegroundColor Green
+        Write-Host "  [✓] NO SUSPICIOUS ACTIVITY DETECTED" -ForegroundColor Green
         Write-Host ""
-        Write-Host "    No visits found for known cheat websites." -ForegroundColor Gray
+        Write-Host "    No visits or accounts found for known cheat websites." -ForegroundColor Gray
         Write-Host ""
     }
     
+    # Статистика
+    Write-Host "  ─────────────────────────────────────────────────────────────────────────" -ForegroundColor Gray
+    Write-Host "  📊 Statistics:" -ForegroundColor Gray
+    Write-Host "     Browsers scanned:          9 (Chrome, Edge, Opera, Opera GX, Yandex, Brave, Vivaldi, Tor, Firefox)" -ForegroundColor White
+    Write-Host "     Suspicious sites visited:  $($foundUrls.Count)" -ForegroundColor $(if($foundUrls.Count -gt 0){'Red'}else{'Green'})
+    Write-Host "     Total visits:              $totalFound" -ForegroundColor $(if($totalFound -gt 0){'Red'}else{'Green'})
+    Write-Host "  ─────────────────────────────────────────────────────────────────────────" -ForegroundColor Gray
     Write-Host ""
-    Write-Host "  =======================================================================" -ForegroundColor Gray
-    Write-Host ""
-    Read-Host "  Press Enter to return to menu"
+    
+    Read-Host "Press Enter to return to menu"
+    Clear-Host
+    Show-Logo
+    
 
-# ============================================================================
-# SECTION 2: MODS ANALYZER
-# ============================================================================
-
-} elseif ($choice -eq "2") {
+} elseifchoice -eq "2") {
     Clear-Host
     Show-Logo
     
@@ -336,7 +376,7 @@ if ($choice -eq "1") {
         }
     }
     
-    # PulseVisuals РѕР±СЂР°Р±РѕС‚РєР° (С‚РѕР»СЊРєРѕ 1.21+)
+    # PulseVisuals Р С•Р В±РЎР‚Р В°Р В±Р С•РЎвЂљР С”Р В° (РЎвЂљР С•Р В»РЎРЉР С”Р С• 1.21+)
     if (Test-Path "C:\PulseVisuals\game\usermods") {
         $versionFolders = Get-ChildItem "C:\PulseVisuals\game\usermods" -Directory -ErrorAction SilentlyContinue
         foreach ($versionFolder in $versionFolders) {
