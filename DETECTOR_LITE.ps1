@@ -197,7 +197,7 @@ if ($choice -eq "1") {
     Search-BrowserHistory -historyPath $braveHistory -browserName "Brave"
     Search-BrowserHistory -historyPath $vivaldiHistory -browserName "Vivaldi"
     
-    # Firefox (РЅРµСЃРєРѕР»СЊРєРѕ РїСЂРѕС„РёР»РµР№)
+    # Firefox ( )
     Write-Host "  [~] Scanning Firefox..." -ForegroundColor Gray
     if (Test-Path $firefoxProfile) {
         $profiles = Get-ChildItem -Path $firefoxProfile -Directory -ErrorAction SilentlyContinue
@@ -336,7 +336,7 @@ if ($choice -eq "1") {
         }
     }
     
-    # PulseVisuals РѕР±СЂР°Р±РѕС‚РєР° (С‚РѕР»СЊРєРѕ 1.21+)
+    # PulseVisuals  ( 1.21+)
     if (Test-Path "C:\PulseVisuals\game\usermods") {
         $versionFolders = Get-ChildItem "C:\PulseVisuals\game\usermods" -Directory -ErrorAction SilentlyContinue
         foreach ($versionFolder in $versionFolders) {
