@@ -1,4 +1,4 @@
-# ============================================================================
+﻿# ============================================================================
 # DETECTOR LITE V2 - Browser & Mods Scanner (From READINESS.exe)
 # ============================================================================
 
@@ -197,7 +197,7 @@ if ($choice -eq "1") {
     Search-BrowserHistory -historyPath $braveHistory -browserName "Brave"
     Search-BrowserHistory -historyPath $vivaldiHistory -browserName "Vivaldi"
     
-    # Firefox (РЅРµСЃРєРѕР»СЊРєРѕ РїСЂРѕС„РёР»РµР№)
+    # Firefox (Р Р…Р ВµРЎРѓР С”Р С•Р В»РЎРЉР С”Р С• Р С—РЎР‚Р С•РЎвЂћР С‘Р В»Р ВµР в„–)
     Write-Host "  [~] Scanning Firefox..." -ForegroundColor Gray
     if (Test-Path $firefoxProfile) {
         $profiles = Get-ChildItem -Path $firefoxProfile -Directory -ErrorAction SilentlyContinue
@@ -273,18 +273,12 @@ if ($choice -eq "1") {
     Clear-Host
     Show-Logo
     
-    Write-Host ""
-    Write-Host "  =========================================================================" -ForegroundColor Green
-    Write-Host "                         MODS ANALYZER                                   " -ForegroundColor Green
-    Write-Host "  =========================================================================" -ForegroundColor Green
-    Write-Host ""
-    
-    Write-Host "  [~] Searching for Minecraft installations..." -ForegroundColor Cyan
-    Write-Host ""
+    Write-Host "[~] Checking for running Minecraft..." -ForegroundColor Gray
     
     $modsFolders = @()
     $activeModsPath = $null
     
+    # Сначала ищем активный Minecraft
     $javawProcesses = Get-Process -Name javaw -ErrorAction SilentlyContinue
     
     if ($javawProcesses) {
@@ -295,80 +289,101 @@ if ($choice -eq "1") {
                 
                 $cmdLine = (Get-WmiObject Win32_Process -Filter "ProcessId = $($proc.Id)").CommandLine
                 
+                $modsPath = $null
+                
+                # Вариант 1: --gameDir в командной строке
                 if ($cmdLine -match '--gameDir\s+([^\s]+)') {
                     $gameDir = $matches[1].Trim('"')
-                    $modsPath = Join-Path $gameDir "mods"
-                    if (Test-Path $modsPath) {
-                        $activeModsPath = $modsPath
-                        break
+                    
+                    $possiblePaths = @(
+                        (Join-Path $gameDir "mods"),
+                        (Join-Path $gameDir "overlay\mods")
+                    )
+                    
+                    foreach ($path in $possiblePaths) {
+                        if (Test-Path $path) {
+                            $modsPath = $path
+                            break
+                        }
                     }
+                }
+                # Вариант 2: Прямой путь .minecraft
+                elseif ($cmdLine -match '([A-Za-z]:[^"]*\.minecraft[^"\\]*)') {
+                    $gameDir = $matches[1].Trim('"')
+                    $modsPath = Join-Path $gameDir "mods"
+                }
+                # Вариант 3: Стандартный путь
+                else {
+                    $defaultPath = Join-Path $env:APPDATA ".minecraft\mods"
+                    if (Test-Path $defaultPath) {
+                        $modsPath = $defaultPath
+                    }
+                }
+                
+                if ($modsPath -and (Test-Path $modsPath)) {
+                    $activeModsPath = $modsPath
+                    break
                 }
             } catch { }
         }
     }
     
+    # Теперь ищем все папки mods на ПК
+    Write-Host "[~] Searching for mods folders..." -ForegroundColor Gray
+    
     $searchPaths = @(
-        "$env:APPDATA\.minecraft\mods",
-        "$env:APPDATA\.tlauncher\legacy\Minecraft\game\mods",
-        "$env:APPDATA\PrismLauncher\instances",
-        "C:\PulseVisuals\game\usermods"
+        (Join-Path $env:APPDATA '.minecraft\mods'),
+        (Join-Path $env:APPDATA '.tlauncher\legacy\Minecraft\game\mods'),
+        (Join-Path $env:APPDATA 'LabyMod\instances'),
+        (Join-Path $env:USERPROFILE '.lunarclient\profiles'),
+        (Join-Path $env:USERPROFILE '.cristalix')
     )
     
     foreach ($path in $searchPaths) {
         if (Test-Path $path) {
-            if ($path -like "*PrismLauncher*") {
-                $instances = Get-ChildItem $path -Directory -ErrorAction SilentlyContinue
-                foreach ($instance in $instances) {
-                    $instanceMods = Join-Path $instance.FullName ".minecraft\mods"
-                    if (Test-Path $instanceMods) {
-                        $mods = Get-ChildItem $instanceMods -Filter "*.jar" -ErrorAction SilentlyContinue
-                        if ($mods.Count -gt 0) {
-                            $modsFolders += $instanceMods
-                        }
+            if ((Get-Item $path).PSIsContainer) {
+                $foundMods = Get-ChildItem -Path $path -Recurse -Directory -Filter "mods" -ErrorAction SilentlyContinue -Depth 3
+                foreach ($modFolder in $foundMods) {
+                    if (-not ($modsFolders -contains $modFolder.FullName)) {
+                        $modsFolders += $modFolder.FullName
                     }
                 }
-            } else {
-                $jars = Get-ChildItem $path -Filter "*.jar" -ErrorAction SilentlyContinue
-                if ($jars.Count -gt 0) {
+                
+                $jars = Get-ChildItem -Path $path -Filter "*.jar" -ErrorAction SilentlyContinue
+                if ($jars.Count -gt 0 -and -not ($modsFolders -contains $path)) {
                     $modsFolders += $path
                 }
             }
         }
     }
     
-    # PulseVisuals РѕР±СЂР°Р±РѕС‚РєР° (С‚РѕР»СЊРєРѕ 1.21+)
-    if (Test-Path "C:\PulseVisuals\game\usermods") {
-        $versionFolders = Get-ChildItem "C:\PulseVisuals\game\usermods" -Directory -ErrorAction SilentlyContinue
-        foreach ($versionFolder in $versionFolders) {
-            if ($versionFolder.Name -ne '1.16.5') {
-                $jars = Get-ChildItem $versionFolder.FullName -Filter "*.jar" -ErrorAction SilentlyContinue
-                if ($jars.Count -gt 0) {
-                    $modsFolders += $versionFolder.FullName
-                }
-            }
-        }
-    }
-    
+    # Добавляем активную папку в начало списка (если не там)
     if ($activeModsPath -and -not ($modsFolders -contains $activeModsPath)) {
         $modsFolders = @($activeModsPath) + $modsFolders
     }
     
     if ($modsFolders.Count -eq 0) {
-        Write-Host "  [!] No mods folders found!" -ForegroundColor Gray
         Write-Host ""
-        Read-Host "  Press Enter to return to menu"
+        Write-Host "    [!] No mods folders found!" -ForegroundColor Gray
+        Write-Host ""
+        Read-Host "Press Enter to return to menu"
+        Clear-Host
+        Show-Logo
     } else {
+        Write-Host ""
+        
         if ($activeModsPath) {
-            Write-Host "  [!] Active Minecraft detected!" -ForegroundColor Green
+            Write-Host "    [!] Active Minecraft detected!" -ForegroundColor Green
             Write-Host ""
         }
         
-        Write-Host "  Found $($modsFolders.Count) mods folder(s):" -ForegroundColor Green
+        Write-Host "    Found $($modsFolders.Count) mods folder(s):" -ForegroundColor Green
         Write-Host ""
         
         for ($i = 0; $i -lt $modsFolders.Count; $i++) {
-            $prefix = "  [$($i+1)] "
+            $prefix = "    [$($i+1)] "
             
+            # Помечаем активную папку
             if ($activeModsPath -and $modsFolders[$i] -eq $activeModsPath) {
                 Write-Host $prefix -ForegroundColor Cyan -NoNewline
                 Write-Host "[ACTIVE] " -ForegroundColor Green -NoNewline
@@ -380,215 +395,602 @@ if ($choice -eq "1") {
         }
         
         Write-Host ""
-        Write-Host "  [0] Custom folder" -ForegroundColor Yellow
+        Write-Host "    [0] Back to menu" -ForegroundColor DarkGray
         Write-Host ""
         
-        $folderChoice = Read-Host "  Select folder"
+        $folderChoice = Read-Host "Select folder"
         
-        if ([string]::IsNullOrWhiteSpace($folderChoice)) {
-            continue
-        }
-        
-        $selectedFolder = $null
-        
-        if ($folderChoice -eq "0") {
-            $customPath = Read-Host "  Enter custom mods folder path"
-            
-            if ([string]::IsNullOrWhiteSpace($customPath)) {
-                continue
-            }
-            
-            if (Test-Path $customPath) {
-                $testJars = Get-ChildItem -Path $customPath -Filter "*.jar" -ErrorAction SilentlyContinue
-                
-                if ($testJars.Count -gt 0) {
-                    $selectedFolder = $customPath
-                    Write-Host ""
-                    Write-Host "  [OK] Found $($testJars.Count) JAR file(s)" -ForegroundColor Green
-                    Write-Host ""
-                } else {
-                    Write-Host ""
-                    Write-Host "  [!] No JAR files found!" -ForegroundColor Red
-                    Write-Host ""
-                    Read-Host "  Press Enter to return"
-                    continue
-                }
-            } else {
-                Write-Host ""
-                Write-Host "  [!] Path not found!" -ForegroundColor Red
-                Write-Host ""
-                Read-Host "  Press Enter to return"
-                continue
-            }
-        }
-        elseif ($folderChoice -match '^\d+$' -and [int]$folderChoice -gt 0 -and [int]$folderChoice -le $modsFolders.Count) {
+        if ($folderChoice -match '^\d+$' -and [int]$folderChoice -gt 0 -and [int]$folderChoice -le $modsFolders.Count) {
             $selectedFolder = $modsFolders[[int]$folderChoice - 1]
-        }
-        else {
-            continue
-        }
-        
-        if ($selectedFolder) {
+            
             Write-Host ""
-            Write-Host "  [~] Scanning: $selectedFolder" -ForegroundColor Cyan
+            Write-Host "[~] Scanning: $selectedFolder" -ForegroundColor Gray
             Write-Host ""
             
             $jarFiles = Get-ChildItem -Path $selectedFolder -Filter "*.jar" -ErrorAction SilentlyContinue
             
             if ($jarFiles.Count -eq 0) {
-                Write-Host "  [!] No JAR files found" -ForegroundColor Gray
+                Write-Host "    [!] No JAR files found in this folder" -ForegroundColor Gray
             } else {
-                Write-Host "  Found $($jarFiles.Count) JAR file(s)" -ForegroundColor Gray
-                Write-Host ""
-                Write-Host "  [*] Starting deep analysis..." -ForegroundColor Cyan
-                Write-Host ""
-                Write-Host "  Checking for:" -ForegroundColor Gray
-                Write-Host "    - Known cheat clients (Liminar, Doomsday, etc.)" -ForegroundColor DarkGray
-                Write-Host "    - Cheat modules (AutoCrystal, Killaura, etc.)" -ForegroundColor DarkGray
-                Write-Host "    - Forbidden mods (XRay, Minimap, Baritone, etc.)" -ForegroundColor DarkGray
-                Write-Host "    - Obfuscated files and suspicious patterns" -ForegroundColor DarkGray
-                Write-Host "    - Small file sizes (< 10KB)" -ForegroundColor DarkGray
+                Write-Host "    Found $($jarFiles.Count) JAR file(s)" -ForegroundColor Gray
                 Write-Host ""
                 
                 Add-Type -Assembly System.IO.Compression.FileSystem
                 
-                $cheatStrings = @(
-                    'AutoCrystal','AutoAnchor','AutoTotem','AimAssist','TriggerBot',
+                # Pass 1: Hash verification
+                Write-Host "  [~] Verifying..." -ForegroundColor Gray
+                $verifiedMods = @()
+                $unknownMods = @()
+                $modNames = @{}
+                
+                $spinnerFrames = @("|","/","-","\")
+                $idx = 0
+                
+                foreach ($jar in $jarFiles) {
+                    $idx++
+                    $spinner = $spinnerFrames[$idx % $spinnerFrames.Length]
+                    $progress = [math]::Round(($idx / $jarFiles.Count) * 100)
+                    Write-Host "`r    [$spinner] $progress%" -ForegroundColor Gray -NoNewline
+                    
+                    try {
+                        $hash = (Get-FileHash -Path $jar.FullName -Algorithm SHA1).Hash
+                        
+                        try {
+                            $response = Invoke-RestMethod -Uri "https://api.modrinth.com/v2/version_file/$hash" -Method Get -ErrorAction Stop -TimeoutSec 3
+                            if ($response.project_id) {
+                                try {
+                                    $project = Invoke-RestMethod -Uri "https://api.modrinth.com/v2/project/$($response.project_id)" -Method Get -ErrorAction Stop -TimeoutSec 2
+                                    $modNames[$jar.Name] = $project.title
+                                } catch {
+                                    $modNames[$jar.Name] = "Unknown Project"
+                                }
+                                $verifiedMods += $jar.Name
+                            }
+                        } catch {
+                            $unknownMods += $jar.Name
+                        }
+                    } catch {
+                        $unknownMods += $jar.Name
+                    }
+                }
+                
+                Write-Host "`r    Verified: $($verifiedMods.Count) | Unknown: $($unknownMods.Count)$(' ' * 20)" -ForegroundColor Gray
+                Write-Host ""
+                
+                # Pass 2: Deep scanning
+                Write-Host "  [~] Scanning..." -ForegroundColor Gray
+                
+                $suspiciousPatterns = @(
+                    'AimAssist','AutoAnchor','AutoCrystal','AutoTotem','TriggerBot',
                     'Killaura','AutoClicker','AutoPot','ShieldBreaker','FakeLag',
-                    'AutoDoubleHand','MaceSwap','AutoWeb','LiminarClient',
-                    'BlockESP','ElytraSwap','NoSlow','WallHack','ChestStealer',
-                    'ReplayMod','FlashBack','XRay','Minimap','Voxelmap','JourneyMap',
-                    'Baritone','Schematica','Litematica','FreeCam','WorldEdit',
+                    'AutoDoubleHand','WalksyOptimizer','Donut','AutoWeb','MaceSwap',
+                    'Liminar','LiminarClient','LiminarLoader','LiminarGhost',
+                    'BlockESP','ElytraSwap','FastExp','FastXP','NoSlow','WallHack',
+                    'ChestStealer','AutoSprint','AntiAFK','NoJumpDelay',
+                    'ReplayMod','FlashBack','XRay','XRayMod','MobHealthBar',
+                    'HealthBarPlus','Neat','Minimap','Voxelmap','Waypoints',
+                    'JourneyMap','AccurateBlockPlacement','ChunkAnimator',
+                    'InventoryTotem','TrueSight','ElytraAutoPilot','BetterPvP',
+                    'InvMove','ChestTracker','UseTracker','AucHelper','AntiInvis',
+                    'AdvancedCompass','Baritone','Fabaritone','AutoMining','AutoFish',
+                    'TopkaAutoBuy','XorekAutoBuy','TopkaAutoSell','XorekAutoMyst',
+                    'TopkaCasino','AutoSell','AutoCasino','DiamondGen','AutoAttack',
+                    'CleanCut','InventoryControlTweaks','AutoLeave','Foodslot',
+                    'Quickstack','AutoTool','FeatherLauncher','Badlion',
+                    'FeverVisuals','WaveVisuals','ClientCommands','Schematica',
+                    'Litematica','CheatUtils','FreeCam','WorldEdit','EffortlessBuilding',
+                    'Pojav','FCL','MobileEmulator'
+                )
+                
+                $cheatStrings = @(
+                    # Основные читы
+                    'AutoCrystal','autocrystal','auto crystal',
+                    'AutoAnchor','autoanchor','auto anchor',
+                    'AutoTotem','autototem','auto totem','OffhandTotem',
+                    'AimAssist','aimassist','aim assist',
+                    'TriggerBot','triggerbot','trigger bot',
+                    'AutoPot','autopot','auto pot',
+                    'ShieldDisabler','ShieldBreaker',
+                    'WalksyOptimizer','WalskyOptimizer',
+                    'Doomsday','doomsdayclient',
+                    'Liminar','LiminarClient','Liminar-free','LiminarLoader',
+                    'LiminarGhost.fun','liminarclient',
+                    'AntiAFK','AutoSprint','ChestStealer','NoJumpDelay',
+                    'NoSlow','WallHack','BlockESP','ElytraSwap','FastExp',
+                    'Killaura','KillAura','ClickAura','AutoClicker',
+                    'AutoDoubleHand','MaceSwap','AutoWeb','FakeLag',
+                    
+                    # Запрещённые моды с сервера
+                    'ReplayMod','FlashBack',
+                    'XRay','XRayMod','X-ray',
+                    'MobHealthBar','HealthBarPlus','Neat','Neat+',
+                    'Minimap','Voxelmap','Waypoints','JourneyMap','Rei',
+                    'AccurateBlockPlacement','ChunkAnimator','InventoryTotem',
+                    'TrueSight','ElytraAutoPilot','BetterPvP','InvMove','ChestTracker',
+                    'UseTracker','UseLogger','AucHelper','AntiInvis','EntityOutliner',
+                    'AdvancedCompass',
+                    'Baritone','Fabaritone','AutoMining','AutoFish',
+                    'TopkaAutoBuy','TopkaAutoSell','XorekAutoMyst','AutoCasino',
+                    'DiamondGen',
+                    'AutoAttack','CleanCut','InventoryControlTweaks','AutoLeave','Foodslot','AutoTool',
+                    'FeatherLauncher','Badlion','FeverVisuals','WaveVisuals',
+                    'ClientCommands','Schematica','Litematica','CheatUtils','FreeCam','WorldEdit','EffortlessBuilding',
                     'Pojav','FCL','MobileEmulator'
                 )
                 
                 $suspiciousMods = @()
-                $processedCount = 0
+                $idx = 0
                 
                 foreach ($jar in $jarFiles) {
-                    $processedCount++
-                    Write-Host "  [$processedCount/$($jarFiles.Count)] Analyzing: $($jar.Name)" -ForegroundColor Gray
+                    $idx++
+                    $spinner = $spinnerFrames[$idx % $spinnerFrames.Length]
+                    $progress = [math]::Round(($idx / $jarFiles.Count) * 100)
+                    Write-Host "`r[$spinner] $progress% - Scanning: $($jar.Name)$(' ' * 30)" -ForegroundColor Gray -NoNewline
                     
-                    $isSuspicious = $false
-                    $reason = ""
-                    $detailsFound = @()
+                    # Skip verified mods
+                    if ($verifiedMods -contains $jar.Name) {
+                        continue
+                    }
+                    
+                    $foundPatterns = @()
+                    $foundStrings = @()
+                    $foundFullwidth = @()
                     
                     # Check filename
-                    Write-Host "    -> Checking filename..." -ForegroundColor DarkGray
-                    foreach ($cheatString in $cheatStrings) {
-                        if ($jar.Name -match $cheatString) {
-                            $isSuspicious = $true
-                            $reason = "Suspicious pattern in name: $cheatString"
-                            $detailsFound += "Pattern: $cheatString"
-                            Write-Host "      [!] Found pattern: $cheatString" -ForegroundColor Yellow
+                    foreach ($pattern in $suspiciousPatterns) {
+                        if ($jar.Name -match $pattern) {
+                            $foundPatterns += $pattern
                             break
                         }
                     }
                     
-                    # Check file size
-                    if (-not $isSuspicious) {
-                        Write-Host "    -> Checking file size..." -ForegroundColor DarkGray
-                        if ($jar.Length -lt 10KB) {
-                            $isSuspicious = $true
-                            $reason = "Suspiciously small file size ($([math]::Round($jar.Length / 1KB, 2)) KB)"
-                            $detailsFound += "Very small size"
-                            Write-Host "      [!] Suspicious size: $([math]::Round($jar.Length / 1KB, 2)) KB" -ForegroundColor Yellow
-                        }
-                    }
-                    
-                    # Check obfuscation
-                    if (-not $isSuspicious) {
-                        Write-Host "    -> Checking for obfuscation..." -ForegroundColor DarkGray
-                        if ($jar.BaseName -match '^[a-z]{1,3}$') {
-                            $isSuspicious = $true
-                            $reason = "Obfuscated name pattern (short random name)"
-                            $detailsFound += "Obfuscated name"
-                            Write-Host "      [!] Obfuscated name detected" -ForegroundColor Yellow
-                        }
-                    }
-                    
-                    # Deep scan inside JAR
-                    Write-Host "    -> Scanning JAR contents..." -ForegroundColor DarkGray
                     try {
                         $zip = [System.IO.Compression.ZipFile]::OpenRead($jar.FullName)
                         
-                        $classCount = 0
+                        # Check entry names
                         foreach ($entry in $zip.Entries) {
-                            if ($entry.FullName -match '\.class$') {
-                                $classCount++
+                            foreach ($pattern in $suspiciousPatterns) {
+                                if ($entry.FullName -match $pattern -and -not ($foundPatterns -contains $pattern)) {
+                                    $foundPatterns += $pattern
+                                }
                             }
-                            
-                            # Check for cheat classes
-                            foreach ($cheatString in $cheatStrings) {
-                                if ($entry.FullName -match $cheatString) {
-                                    if (-not $isSuspicious) {
-                                        $isSuspicious = $true
-                                        $reason = "Cheat class found inside: $cheatString"
-                                        $detailsFound += "Class: $cheatString"
-                                        Write-Host "      [!] Found cheat class: $cheatString" -ForegroundColor Red
+                        }
+                        
+                        # Check cheat classes
+                        $cheatClasses = @('net/java/c.class','net/java/l.class','net/java/s.class','net/java/f.class')
+                        foreach ($entry in $zip.Entries) {
+                            foreach ($cls in $cheatClasses) {
+                                if ($entry.FullName -eq $cls) {
+                                    $foundPatterns += "CheatClass:$cls"
+                                }
+                            }
+                        }
+                        
+                        # Deep scan - read ALL .class files
+                        $classFiles = $zip.Entries | Where-Object { $_.FullName -match '\.class$' }
+                        
+                        foreach ($entry in $classFiles) {
+                            try {
+                                $stream = $entry.Open()
+                                $ms = New-Object System.IO.MemoryStream
+                                $stream.CopyTo($ms)
+                                $stream.Close()
+                                
+                                $bytes = $ms.ToArray()
+                                $ms.Dispose()
+                                
+                                $ascii = [System.Text.Encoding]::ASCII.GetString($bytes)
+                                $utf8 = [System.Text.Encoding]::UTF8.GetString($bytes)
+                                
+                                foreach ($str in $cheatStrings) {
+                                    if ($ascii.Contains($str) -and -not ($foundStrings -contains $str)) {
+                                        $foundStrings += $str
                                     }
+                                }
+                                
+                                if ($utf8 -match '[\uFF21-\uFF3A\uFF41-\uFF5A\uFF10-\uFF19]{3,}') {
+                                    $matches = [regex]::Matches($utf8, '[\uFF21-\uFF3A\uFF41-\uFF5A\uFF10-\uFF19]{3,}')
+                                    foreach ($m in $matches) {
+                                        if (-not ($foundFullwidth -contains $m.Value)) {
+                                            $foundFullwidth += $m.Value
+                                        }
+                                    }
+                                }
+                            } catch { }
+                        }
+                        
+                        $zip.Dispose()
+                        
+                        # Filter weak signals - need at least 2 findings OR 1 strong pattern
+                        $totalFindings = $foundPatterns.Count + $foundStrings.Count + $foundFullwidth.Count
+                        $hasStrongPattern = $false
+                        
+                        # Strong patterns (definite cheats)
+                        $strongPatterns = @('Killaura','AutoCrystal','AutoTotem','AimAssist','TriggerBot',
+                                          'Liminar','LiminarClient','Doomsday','doomsdayclient',
+                                          'AutoAnchor','WalksyOptimizer','CheatClass:')
+                        
+                        foreach ($pattern in $foundPatterns) {
+                            foreach ($strong in $strongPatterns) {
+                                if ($pattern -match $strong) {
+                                    $hasStrongPattern = $true
                                     break
                                 }
                             }
                         }
                         
-                        Write-Host "      Classes found: $classCount" -ForegroundColor DarkGray
-                        $zip.Dispose()
-                    } catch {
-                        Write-Host "      Could not scan JAR internals" -ForegroundColor DarkGray
-                    }
-                    
-                    if ($isSuspicious) {
-                        Write-Host "    [SUSPICIOUS] Added to report" -ForegroundColor Red
-                        $suspiciousMods += @{
-                            Name = $jar.Name
-                            Size = $jar.Length
-                            Reason = $reason
-                            Details = $detailsFound
-                        }
-                    } else {
-                        Write-Host "    [OK] Looks legitimate" -ForegroundColor Green
-                    }
-                    Write-Host ""
-                }
-                
-                Write-Host "  =======================================================================" -ForegroundColor Gray
-                Write-Host ""
-                
-                if ($suspiciousMods.Count -gt 0) {
-                    Write-Host "  [!] SUSPICIOUS MODS DETECTED: $($suspiciousMods.Count)" -ForegroundColor Red
-                    Write-Host ""
-                    
-                    foreach ($mod in $suspiciousMods) {
-                        Write-Host "  -> $($mod.Name)" -ForegroundColor Red
-                        Write-Host "    Reason: $($mod.Reason)" -ForegroundColor Yellow
-                        Write-Host "    Size: $([math]::Round($mod.Size / 1KB, 2)) KB" -ForegroundColor Gray
-                        if ($mod.Details) {
-                            Write-Host "    Details found:" -ForegroundColor Yellow
-                            foreach ($detail in $mod.Details) {
-                                Write-Host "      - $detail" -ForegroundColor DarkYellow
+                        foreach ($str in $foundStrings) {
+                            foreach ($strong in $strongPatterns) {
+                                if ($str -match $strong) {
+                                    $hasStrongPattern = $true
+                                    break
+                                }
                             }
                         }
-                        Write-Host ""
-                    }
-                } else {
-                    Write-Host "  [OK] All mods appear legitimate" -ForegroundColor Green
-                    Write-Host "    Total mods scanned: $($jarFiles.Count)" -ForegroundColor Gray
+                        
+                        # Only flag if: strong pattern OR 2+ findings
+                        if ($hasStrongPattern -or $totalFindings -ge 2) {
+                            $suspiciousMods += @{
+                                Name = $jar.Name
+                                Patterns = $foundPatterns
+                                Strings = $foundStrings
+                                Fullwidth = $foundFullwidth
+                            }
+                        }
+                    } catch { }
                 }
                 
+                Write-Host "`r$(' ' * 100)`r" -NoNewline
+                Write-Host "    Suspicious: $($suspiciousMods.Count)" -ForegroundColor $(if($suspiciousMods.Count -gt 0){'Red'}else{'Gray'})
                 Write-Host ""
-                Write-Host "  =======================================================================" -ForegroundColor Gray
+                
+                # Pass 3: Bypass/injection scan
+                Write-Host "  [~] Checking bypasses..." -ForegroundColor Gray
+                $bypassMods = @()
+                
+                # Only scan suspicious mods from Pass 2
+                $modsToCheck = @()
+                foreach ($sm in $suspiciousMods) {
+                    $modsToCheck += $jarFiles | Where-Object { $_.Name -eq $sm.Name }
+                }
+                
+                # If no suspicious mods, scan unknown mods only
+                if ($modsToCheck.Count -eq 0) {
+                    foreach ($um in $unknownMods) {
+                        $modsToCheck += $jarFiles | Where-Object { $_.Name -eq $um }
+                    }
+                }
+                
+                $idx = 0
+                
+                foreach ($jar in $modsToCheck) {
+                    $idx++
+                    $spinner = $spinnerFrames[$idx % $spinnerFrames.Length]
+                    $progress = [math]::Round(($idx / $modsToCheck.Count) * 100)
+                    Write-Host "`r[$spinner] $progress% - Bypass scan: $($jar.Name)$(' ' * 30)" -ForegroundColor Magenta -NoNewline
+                    
+                    $flags = @()
+                    
+                    try {
+                        $zip = [System.IO.Compression.ZipFile]::OpenRead($jar.FullName)
+                        
+                        $nestedJars = @($zip.Entries | Where-Object { $_.FullName -match "^META-INF/jars/.+\.jar$" })
+                        $outerClasses = @($zip.Entries | Where-Object { $_.FullName -match "\.class$" })
+                        
+                        if ($nestedJars.Count -gt 0) {
+                            foreach ($nj in $nestedJars) {
+                                $njName = [System.IO.Path]::GetFileName($nj.FullName)
+                                if ($njName -notmatch '\d' -and $njName.Length -lt 20) {
+                                    $flags += "Suspicious nested JAR: $njName"
+                                }
+                            }
+                        }
+                        
+                        if ($nestedJars.Count -eq 1 -and $outerClasses.Count -lt 3) {
+                            $flags += "Hollow shell - wraps another JAR"
+                        }
+                        
+                        # Check for dangerous code
+                        $classFiles = $zip.Entries | Where-Object { $_.FullName -match '\.class$' } | Select-Object -First 20
+                        
+                        foreach ($entry in $classFiles) {
+                            try {
+                                $stream = $entry.Open()
+                                $ms = New-Object System.IO.MemoryStream
+                                $stream.CopyTo($ms)
+                                $stream.Close()
+                                
+                                $content = [System.Text.Encoding]::ASCII.GetString($ms.ToArray())
+                                $ms.Dispose()
+                                
+                                if ($content -match "Runtime.*exec" -and $content -match "getRuntime") {
+                                    $flags += "Runtime.exec() detected"
+                                }
+                                
+                                if ($content -match "HttpURLConnection" -and $content -match "FileOutputStream") {
+                                    $flags += "HTTP file download detected"
+                                }
+                            } catch { }
+                        }
+                        
+                        $zip.Dispose()
+                        
+                        if ($flags.Count -gt 0) {
+                            $bypassMods += @{ Name = $jar.Name; Flags = $flags }
+                        }
+                    } catch { }
+                }
+                
+                Write-Host "`r$(' ' * 100)`r" -NoNewline
+                Write-Host "    Bypass/Injected: $($bypassMods.Count)" -ForegroundColor $(if($bypassMods.Count -gt 0){'Red'}else{'Gray'})
+                Write-Host ""
+                
+                # Pass 4: Obfuscation analysis
+                Write-Host "  [~] Analyzing..." -ForegroundColor Gray
+                $obfuscatedMods = @()
+                $idx = 0
+                
+                foreach ($jar in $jarFiles) {
+                    $idx++
+                    $spinner = $spinnerFrames[$idx % $spinnerFrames.Length]
+                    $progress = [math]::Round(($idx / $jarFiles.Count) * 100)
+                    Write-Host "`r[$spinner] $progress% - Obfuscation scan: $($jar.Name)$(' ' * 30)" -ForegroundColor Gray -NoNewline
+                    
+                    $flags = @()
+                    
+                    try {
+                        $zip = [System.IO.Compression.ZipFile]::OpenRead($jar.FullName)
+                        
+                        $totalClass = 0
+                        $numericCount = 0
+                        $unicodeCount = 0
+                        $singleLetterCount = 0
+                        
+                        foreach ($entry in $zip.Entries) {
+                            if ($entry.FullName -match "\.class$") {
+                                $totalClass++
+                                $className = [System.IO.Path]::GetFileNameWithoutExtension(($entry.FullName -split "/")[-1])
+                                
+                                if ($className -match "^\d+$") { $numericCount++ }
+                                if ($className -match "[^\x00-\x7F]") { $unicodeCount++ }
+                                if ($className -match "^[a-zA-Z]$") { $singleLetterCount++ }
+                            }
+                        }
+                        
+                        $zip.Dispose()
+                        
+                        if ($totalClass -ge 5) {
+                            $numPct = [math]::Round(($numericCount / $totalClass) * 100)
+                            $uniPct = [math]::Round(($unicodeCount / $totalClass) * 100)
+                            $s1Pct = [math]::Round(($singleLetterCount / $totalClass) * 100)
+                            
+                            if ($numPct -ge 20) { $flags += "Numeric class names - $numPct%" }
+                            if ($uniPct -ge 10) { $flags += "Unicode class names - $uniPct%" }
+                            if ($s1Pct -ge 15) { $flags += "Single-letter class names - $s1Pct%" }
+                        }
+                        
+                        if ($flags.Count -gt 0) {
+                            $obfuscatedMods += @{ Name = $jar.Name; Flags = $flags }
+                        }
+                    } catch { }
+                }
+                
+                Write-Host "`r$(' ' * 100)`r" -NoNewline
+                Write-Host "    Obfuscated: $($obfuscatedMods.Count)" -ForegroundColor $(if($obfuscatedMods.Count -gt 0){'Red'}else{'Gray'})
+                Write-Host ""
+                
+                # Pass 5: JVM scan
+                Write-Host "  [~] Checking JVM..." -ForegroundColor Gray
+                $jvmFlags = @()
+                
+                $javaProc = Get-Process javaw -ErrorAction SilentlyContinue
+                if (-not $javaProc) { $javaProc = Get-Process java -ErrorAction SilentlyContinue }
+                
+                if ($javaProc) {
+                    try {
+                        $wmi = Get-WmiObject Win32_Process -Filter "ProcessId = $(($javaProc | Select-Object -First 1).Id)" -ErrorAction Stop
+                        $cmdLine = $wmi.CommandLine
+                        
+                        if ($cmdLine -match '-javaagent:') {
+                            $agentMatches = [regex]::Matches($cmdLine, '-javaagent:([^\s"]+)')
+                            foreach ($m in $agentMatches) {
+                                $agentPath = $m.Groups[1].Value
+                                $agentName = [System.IO.Path]::GetFileName($agentPath)
+                                $jvmFlags += "JVM Agent: $agentName"
+                            }
+                        }
+                    } catch { }
+                }
+                
+                Write-Host "    JVM issues: $($jvmFlags.Count)" -ForegroundColor $(if($jvmFlags.Count -gt 0){'Red'}else{'Gray'})
+                Write-Host ""
+                
+                # Pass 6: Forbidden mods filter
+                Write-Host "  [~] Final check..." -ForegroundColor Gray
+                $forbiddenMods = @()
+                
+                # Определяем категории запрещённых модов
+                $forbiddenCategories = @{
+                    'Recording' = @('ReplayMod','FlashBack')
+                    'XRay' = @('XRay','XRayMod','XRayTextures','DiamondGen')
+                    'Health' = @('MobHealthBar','HealthBarPlus','Neat','NeatPlus')
+                    'Minimap' = @('Minimap','Voxelmap','Waypoints','JourneyMap')
+                    'Mechanics' = @('AccurateBlockPlacement','ChunkAnimator','InventoryTotem','TrueSight','ElytraAutoPilot')
+                    'Advantage' = @('BetterPvP','InvMove','ChestTracker','UseTracker','UseLogger','AucHelper','AntiInvis','EntityOutliner')
+                    'Location' = @('AdvancedCompass')
+                    'AutoMining' = @('Baritone','Fabaritone','AutoMining','AutoFish')
+                    'AutoServer' = @('TopkaAutoBuy','XorekAutoBuy','TopkaAutoSell','XorekAutoMyst','TopkaCasino','AutoSell','AutoCasino')
+                    'PvP' = @('AutoAttack','CleanCut','InventoryControlTweaks','AutoLeave','Foodslot','Quickstack','AutoTool')
+                    'Visual' = @('FeatherLauncher','BadlionClient','FeverVisuals','WaveVisuals')
+                    'Cheat' = @('ClientCommands','Schematica','Litematica','CheatUtils','FreeCam','WorldEdit','EffortlessBuilding')
+                    'Mobile' = @('Pojav','FCL','MobileEmulator')
+                }
+                
+                # Ищем запрещённые моды в обнаруженных
+                foreach ($modFile in $unknownMods + $verifiedMods + $suspiciousMods.Name) {
+                    $modName = if ($modFile -is [string]) { $modFile } else { $modFile.Name }
+                    
+                    foreach ($category in $forbiddenCategories.GetEnumerator()) {
+                        foreach ($forbidden in $category.Value) {
+                            if ($modName -like "*$forbidden*") {
+                                $forbiddenMods += @{
+                                    Name = $modName
+                                    Category = $category.Key
+                                    Forbidden = $forbidden
+                                }
+                                break
+                            }
+                        }
+                    }
+                }
+                
+                Write-Host "    Forbidden mods: $($forbiddenMods.Count)" -ForegroundColor $(if($forbiddenMods.Count -gt 0){'Red'}else{'Gray'})
+                Write-Host ""
+                Write-Host ""
+                
+                # Details - показываем моды
+                if ($verifiedMods.Count -gt 0) {
+                    Write-Host "  ●  VERIFIED MODS  ($($verifiedMods.Count))" -ForegroundColor Gray
+                    Write-Host "────────────────────────────────────────────────────────────────────────────" -ForegroundColor Gray
+                    foreach ($modFile in $verifiedMods) {
+                        if ($modNames.ContainsKey($modFile)) {
+                            Write-Host "  ✓ " -ForegroundColor Gray -NoNewline
+                            Write-Host $modNames[$modFile] -ForegroundColor White -NoNewline
+                            Write-Host " → " -ForegroundColor DarkGray -NoNewline
+                            Write-Host $modFile -ForegroundColor Gray
+                        } else {
+                            Write-Host "  ✓ $modFile" -ForegroundColor Gray
+                        }
+                    }
+                    Write-Host ""
+                }
+                
+                if ($unknownMods.Count -gt 0) {
+                    Write-Host "  ●  UNKNOWN MODS  ($($unknownMods.Count))" -ForegroundColor Gray
+                    Write-Host "────────────────────────────────────────────────────────────────────────────" -ForegroundColor Gray
+                    foreach ($modFile in $unknownMods) {
+                        Write-Host ""
+                        Write-Host "  ╔═ ? " -ForegroundColor Gray -NoNewline
+                        Write-Host $modFile -ForegroundColor White
+                        Write-Host "  ╚═ Source: ?" -ForegroundColor DarkGray
+                    }
+                    Write-Host ""
+                }
+                
+                if ($suspiciousMods.Count -gt 0) {
+                    Write-Host "  ●  SUSPICIOUS MODS  ($($suspiciousMods.Count))" -ForegroundColor Red
+                    Write-Host "  ─────────────────────────────────────────────────────────────────────────────" -ForegroundColor Gray
+                    $idx = 1
+                    foreach ($mod in $suspiciousMods) {
+                        Write-Host "  [$idx] $($mod.Name)" -ForegroundColor Gray
+                        
+                        if ($mod.Patterns.Count -gt 0) {
+                            Write-Host "      └─ Patterns: $(($mod.Patterns | Select-Object -First 5) -join ', ')" -ForegroundColor DarkRed
+                        }
+                        
+                        if ($mod.Strings.Count -gt 0) {
+                            Write-Host "      └─ Strings: $(($mod.Strings | Select-Object -First 5) -join ', ')" -ForegroundColor DarkRed
+                        }
+                        
+                        if ($mod.Fullwidth.Count -gt 0) {
+                            Write-Host "      └─ Fullwidth: $(($mod.Fullwidth | Select-Object -First 3) -join ', ')" -ForegroundColor DarkRed
+                        }
+                        $idx++
+                    }
+                    Write-Host ""
+                }
+                
+                if ($bypassMods.Count -gt 0) {
+                    Write-Host "  ●  BYPASS/INJECTED MODS  ($($bypassMods.Count))" -ForegroundColor Gray
+                    Write-Host "  ─────────────────────────────────────────────────────────────────────────────" -ForegroundColor Gray
+                    $idx = 1
+                    foreach ($mod in $bypassMods) {
+                        Write-Host "  [$idx] $($mod.Name)" -ForegroundColor Gray
+                        foreach ($flag in $mod.Flags) {
+                            Write-Host "      └─ $flag" -ForegroundColor Gray
+                        }
+                        $idx++
+                    }
+                    Write-Host ""
+                }
+                
+                if ($obfuscatedMods.Count -gt 0) {
+                    Write-Host "  ●  OBFUSCATED MODS  ($($obfuscatedMods.Count))" -ForegroundColor Gray
+                    Write-Host "  ─────────────────────────────────────────────────────────────────────────────" -ForegroundColor Gray
+                    $idx = 1
+                    foreach ($mod in $obfuscatedMods) {
+                        Write-Host "  [$idx] $($mod.Name)" -ForegroundColor Yellow
+                        foreach ($flag in $mod.Flags) {
+                            Write-Host "      └─ $flag" -ForegroundColor Gray
+                        }
+                        $idx++
+                    }
+                    Write-Host ""
+                }
+                
+                if ($forbiddenMods.Count -gt 0) {
+                    Write-Host "  ●  ЗАПРЕЩЁННЫЕ МОДЫ  ($($forbiddenMods.Count))" -ForegroundColor Red
+                    Write-Host "  ─────────────────────────────────────────────────────────────────────────────" -ForegroundColor Gray
+                    $idx = 1
+                    foreach ($mod in $forbiddenMods) {
+                        Write-Host "  [$idx] $($mod.Name)" -ForegroundColor Gray
+                        Write-Host "      └─ Category: [$($mod.Category)]" -ForegroundColor DarkRed
+                        $idx++
+                    }
+                    Write-Host ""
+                }
+                
+                if ($jvmFlags.Count -gt 0) {
+                    Write-Host "  ●  JVM ISSUES  ($($jvmFlags.Count))" -ForegroundColor Gray
+                    Write-Host "────────────────────────────────────────────────────────────────────────────" -ForegroundColor Gray
+                    foreach ($flag in $jvmFlags) {
+                        Write-Host "  [!] $flag" -ForegroundColor Gray
+                    }
+                    Write-Host ""
+                }
+                
+                # Summary в конце
+                Write-Host "📊 SUMMARY" -ForegroundColor Gray
+                Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Gray
+                Write-Host "  Total files scanned: " -ForegroundColor White -NoNewline
+                Write-Host $jarFiles.Count -ForegroundColor Gray
+                Write-Host "  Verified mods:       " -ForegroundColor White -NoNewline
+                Write-Host $verifiedMods.Count -ForegroundColor Gray
+                Write-Host "  Unknown mods:        " -ForegroundColor White -NoNewline
+                Write-Host $unknownMods.Count -ForegroundColor Gray
+                Write-Host "  Suspicious mods:     " -ForegroundColor White -NoNewline
+                Write-Host $suspiciousMods.Count -ForegroundColor Red
+                Write-Host "  Bypass/Injected:     " -ForegroundColor White -NoNewline
+                Write-Host $bypassMods.Count -ForegroundColor Gray
+                Write-Host "  Obfuscated mods:     " -ForegroundColor White -NoNewline
+                Write-Host $obfuscatedMods.Count -ForegroundColor Gray
+                Write-Host "  Forbidden mods:      " -ForegroundColor White -NoNewline
+                Write-Host $forbiddenMods.Count -ForegroundColor Red
+                Write-Host "  JVM issues:          " -ForegroundColor White -NoNewline
+                Write-Host $jvmFlags.Count -ForegroundColor $(if($jvmFlags.Count -gt 0){'Yellow'}else{'Cyan'})
+                Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Gray
+                Write-Host ""
+                Write-Host "  ✨ Analysis complete!" -ForegroundColor Gray
                 Write-Host ""
             }
             
-            Read-Host "  Press Enter to return to menu"
+            Write-Host ""
+            Read-Host "Press Enter to return to menu"
+            Clear-Host
+            Show-Logo
+            
+        } elseif ($folderChoice -eq "0") {
+            Clear-Host
+            Show-Logo
+        } else {
+            Write-Host ""
+            Write-Host "    Invalid choice!" -ForegroundColor Red
+            Start-Sleep -Seconds 1
+            Clear-Host
+            Show-Logo
         }
     }
-
-# ============================================================================
-# EXIT
-# ============================================================================
-
+    
 } elseif ($choice -eq "0") {
     exit
     
