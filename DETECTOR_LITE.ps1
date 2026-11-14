@@ -690,6 +690,7 @@ if ($choice -eq "1") {
                     $selectedFolder = $customPath
                     Write-Host ""
                     Write-Host "    [OK] Found $($testJars.Count) JAR file(s)" -ForegroundColor Green
+                    # Не используем continue - позволяем коду продолжиться к сканированию
                 } else {
                     Write-Host ""
                     Write-Host "    [!] No JAR files found!" -ForegroundColor Red
@@ -708,8 +709,21 @@ if ($choice -eq "1") {
             }
         }
         elseif ($folderChoice -match '^\d+$' -and [int]$folderChoice -gt 0 -and [int]$folderChoice -le $modsFolders.Count) {
+            # Обычный выбор номера из списка
             $selectedFolder = $modsFolders[[int]$folderChoice - 1]
-            
+        }
+        else {
+            # Неверный выбор
+            Write-Host ""
+            Write-Host "    [!] Invalid choice!" -ForegroundColor Red
+            Start-Sleep -Seconds 1
+            Clear-Host
+            Show-Logo
+            continue
+        }
+        
+        # Общий блок сканирования для ЛЮБОЙ выбранной папки
+        if ($selectedFolder) {
             Write-Host ""
             Write-Host "[~] Scanning: $selectedFolder" -ForegroundColor Gray
             Write-Host ""
