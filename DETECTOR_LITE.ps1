@@ -1,10 +1,9 @@
 # ============================================================================
-# DETECTOR LITE - Browser & Mods Scanner
+# DETECTOR LITE V2 - Browser & Mods Scanner (From READINESS.exe)
 # ============================================================================
 
 $ErrorActionPreference = "SilentlyContinue"
-
-$Host.UI.RawUI.WindowTitle = 'Detector Lite v1.0'
+$Host.UI.RawUI.WindowTitle = 'Detector Lite v2.0'
 $Host.UI.RawUI.BackgroundColor = "Black"
 $Host.UI.RawUI.ForegroundColor = "White"
 Clear-Host
@@ -17,9 +16,9 @@ function Show-Logo {
     Write-Host ""
     Write-Host "  ╔═══════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
     Write-Host "  ║                                                               ║" -ForegroundColor Cyan
-    Write-Host "  ║                    DETECTOR LITE v1.0                         ║" -ForegroundColor Cyan
+    Write-Host "  ║                    DETECTOR LITE v2.0                         ║" -ForegroundColor Cyan
     Write-Host "  ║                                                               ║" -ForegroundColor Cyan
-    Write-Host "  ║             Browser & Mods Cheat Detection                    ║" -ForegroundColor Cyan
+    Write-Host "  ║          Browser & Mods Cheat Detection System                ║" -ForegroundColor Cyan
     Write-Host "  ║                                                               ║" -ForegroundColor Cyan
     Write-Host "  ╚═══════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
     Write-Host ""
@@ -55,220 +54,209 @@ if ($choice -eq "1") {
     Show-Logo
     
     Write-Host ""
-    Write-Host "  ╔═══════════════════════════════════════════════════════════════╗" -ForegroundColor Yellow
-    Write-Host "  ║                  BROWSER HISTORY SCANNER                      ║" -ForegroundColor Yellow
-    Write-Host "  ╚═══════════════════════════════════════════════════════════════╝" -ForegroundColor Yellow
+    Write-Host "  ╔═════════════════════════════════════════════════════════════════════════╗" -ForegroundColor Yellow
+    Write-Host "  ║                    BROWSER HISTORY SCANNER                              ║" -ForegroundColor Yellow
+    Write-Host "  ╚═════════════════════════════════════════════════════════════════════════╝" -ForegroundColor Yellow
     Write-Host ""
     
-    $detections = @()
-    
-    # Ключевые слова для поиска
-    $keywords = @(
-        "cheat", "hack", "inject", "bypass", "cracked", "crack",
-        "systemdlc", "vape", "liquidbounce", "wurst", "meteor",
-        "aristois", "impact", "sigma", "flux", "jello",
-        "download cheat", "minecraft hack", "free cheat"
+    # Список подозрительных сайтов
+    $suspiciousSites = @(
+        'deltadlc.xyz',
+        'wexside.ru',
+        'exploitclient.com',
+        'systemdlc.com',
+        'cortexclient.com',
+        'mhub.fun',
+        'wildclient.org',
+        'nightclient.xyz',
+        'nursultan.fun',
+        'doomsdayclient.com',
+        'fearclient.tilda.ws',
+        'liminarclient.fun',
+        'vapeclient.net',
+        'liquidbounce.net',
+        'wurstclient.net',
+        'meteorclient.com'
     )
     
-    # Chrome
-    Write-Host "  [1/4] Checking Chrome..." -ForegroundColor Cyan
-    $chromePath = "$env:LOCALAPPDATA\Google\Chrome\User Data\Default\History"
-    if (Test-Path $chromePath) {
-        $tempChrome = "$env:TEMP\chrome_history_temp"
-        Copy-Item $chromePath $tempChrome -Force -ErrorAction SilentlyContinue
+    # Прогресс бар
+    $barLength = 50
+    Write-Host "  Scanning browsers... " -NoNewline -ForegroundColor Gray
+    for ($i = 0; $i -le $barLength; $i++) {
+        $percent = [math]::Round(($i / $barLength) * 100)
+        $bar = "█" * $i + "░" * ($barLength - $i)
+        Write-Host "`r  Scanning browsers... [$bar] $percent%" -NoNewline -ForegroundColor Gray
+        Start-Sleep -Milliseconds 20
+    }
+    Write-Host "`r$(' ' * 80)" -NoNewline
+    Write-Host "`r" -NoNewline
+    Write-Host ""
+    Write-Host ""
+    
+    $foundUrls = @{}
+    $totalFound = 0
+    
+    # Функция для поиска URL в истории
+    function Search-BrowserHistory {
+        param($historyPath, $browserName)
+        
+        if (-not (Test-Path $historyPath)) {
+            return
+        }
         
         try {
-            $conn = New-Object System.Data.SQLite.SQLiteConnection("Data Source=$tempChrome")
-            $conn.Open()
-            $cmd = $conn.CreateCommand()
-            $cmd.CommandText = "SELECT url, title, last_visit_time FROM urls ORDER BY last_visit_time DESC LIMIT 1000"
-            $reader = $cmd.ExecuteReader()
+            $tempHistory = "$env:TEMP\browser_history_temp.db"
+            Copy-Item -Path $historyPath -Destination $tempHistory -Force -ErrorAction SilentlyContinue
+            
+            Add-Type -AssemblyName System.Data
+            $connection = New-Object System.Data.SQLite.SQLiteConnection("Data Source=$tempHistory;Version=3;")
+            $connection.Open()
+            
+            $command = $connection.CreateCommand()
+            $command.CommandText = "SELECT url, visit_count FROM urls"
+            
+            $reader = $command.ExecuteReader()
             
             while ($reader.Read()) {
                 $url = $reader["url"]
-                $title = $reader["title"]
+                $visitCount = $reader["visit_count"]
                 
-                foreach ($keyword in $keywords) {
-                    if ($url -match $keyword -or $title -match $keyword) {
-                        $detections += @{
-                            Browser = "Chrome"
-                            URL = $url
-                            Title = $title
-                            Keyword = $keyword
-                        }
-                        break
-                    }
-                }
-            }
-            $reader.Close()
-            $conn.Close()
-        } catch {
-            Write-Host "      [!] Chrome database error (may be encrypted)" -ForegroundColor Yellow
-        }
-        
-        Remove-Item $tempChrome -Force -ErrorAction SilentlyContinue
-        Write-Host "      [+] Chrome checked" -ForegroundColor Green
-    } else {
-        Write-Host "      [-] Chrome not found" -ForegroundColor Gray
-    }
-    
-    # Edge
-    Write-Host "  [2/4] Checking Edge..." -ForegroundColor Cyan
-    $edgePath = "$env:LOCALAPPDATA\Microsoft\Edge\User Data\Default\History"
-    if (Test-Path $edgePath) {
-        $tempEdge = "$env:TEMP\edge_history_temp"
-        Copy-Item $edgePath $tempEdge -Force -ErrorAction SilentlyContinue
-        
-        try {
-            $conn = New-Object System.Data.SQLite.SQLiteConnection("Data Source=$tempEdge")
-            $conn.Open()
-            $cmd = $conn.CreateCommand()
-            $cmd.CommandText = "SELECT url, title FROM urls ORDER BY last_visit_time DESC LIMIT 1000"
-            $reader = $cmd.ExecuteReader()
-            
-            while ($reader.Read()) {
-                $url = $reader["url"]
-                $title = $reader["title"]
-                
-                foreach ($keyword in $keywords) {
-                    if ($url -match $keyword -or $title -match $keyword) {
-                        $detections += @{
-                            Browser = "Edge"
-                            URL = $url
-                            Title = $title
-                            Keyword = $keyword
-                        }
-                        break
-                    }
-                }
-            }
-            $reader.Close()
-            $conn.Close()
-        } catch {
-            Write-Host "      [!] Edge database error" -ForegroundColor Yellow
-        }
-        
-        Remove-Item $tempEdge -Force -ErrorAction SilentlyContinue
-        Write-Host "      [+] Edge checked" -ForegroundColor Green
-    } else {
-        Write-Host "      [-] Edge not found" -ForegroundColor Gray
-    }
-    
-    # Firefox
-    Write-Host "  [3/4] Checking Firefox..." -ForegroundColor Cyan
-    $firefoxPath = "$env:APPDATA\Mozilla\Firefox\Profiles"
-    if (Test-Path $firefoxPath) {
-        $profiles = Get-ChildItem $firefoxPath -Directory
-        foreach ($profile in $profiles) {
-            $placesDb = Join-Path $profile.FullName "places.sqlite"
-            if (Test-Path $placesDb) {
-                $tempFirefox = "$env:TEMP\firefox_places_temp"
-                Copy-Item $placesDb $tempFirefox -Force -ErrorAction SilentlyContinue
-                
-                try {
-                    $conn = New-Object System.Data.SQLite.SQLiteConnection("Data Source=$tempFirefox")
-                    $conn.Open()
-                    $cmd = $conn.CreateCommand()
-                    $cmd.CommandText = "SELECT url, title FROM moz_places ORDER BY last_visit_date DESC LIMIT 1000"
-                    $reader = $cmd.ExecuteReader()
-                    
-                    while ($reader.Read()) {
-                        $url = $reader["url"]
-                        $title = $reader["title"]
-                        
-                        foreach ($keyword in $keywords) {
-                            if ($url -match $keyword -or $title -match $keyword) {
-                                $detections += @{
-                                    Browser = "Firefox"
-                                    URL = $url
-                                    Title = $title
-                                    Keyword = $keyword
-                                }
-                                break
+                foreach ($site in $script:suspiciousSites) {
+                    if ($url -match $site) {
+                        if ($script:foundUrls.ContainsKey($url)) {
+                            $script:foundUrls[$url].Count += $visitCount
+                            if (-not ($script:foundUrls[$url].Browsers -contains $browserName)) {
+                                $script:foundUrls[$url].Browsers += @($browserName)
+                            }
+                        } else {
+                            $script:foundUrls[$url] = @{
+                                Count = $visitCount
+                                Browsers = @($browserName)
                             }
                         }
-                    }
-                    $reader.Close()
-                    $conn.Close()
-                } catch { }
-                
-                Remove-Item $tempFirefox -Force -ErrorAction SilentlyContinue
-            }
-        }
-        Write-Host "      [+] Firefox checked" -ForegroundColor Green
-    } else {
-        Write-Host "      [-] Firefox not found" -ForegroundColor Gray
-    }
-    
-    # Opera GX
-    Write-Host "  [4/4] Checking Opera GX..." -ForegroundColor Cyan
-    $operaPath = "$env:APPDATA\Opera Software\Opera GX Stable\History"
-    if (Test-Path $operaPath) {
-        $tempOpera = "$env:TEMP\opera_history_temp"
-        Copy-Item $operaPath $tempOpera -Force -ErrorAction SilentlyContinue
-        
-        try {
-            $conn = New-Object System.Data.SQLite.SQLiteConnection("Data Source=$tempOpera")
-            $conn.Open()
-            $cmd = $conn.CreateCommand()
-            $cmd.CommandText = "SELECT url, title FROM urls ORDER BY last_visit_time DESC LIMIT 1000"
-            $reader = $cmd.ExecuteReader()
-            
-            while ($reader.Read()) {
-                $url = $reader["url"]
-                $title = $reader["title"]
-                
-                foreach ($keyword in $keywords) {
-                    if ($url -match $keyword -or $title -match $keyword) {
-                        $detections += @{
-                            Browser = "Opera GX"
-                            URL = $url
-                            Title = $title
-                            Keyword = $keyword
-                        }
+                        $script:totalFound++
                         break
                     }
                 }
             }
+            
             $reader.Close()
-            $conn.Close()
-        } catch { }
-        
-        Remove-Item $tempOpera -Force -ErrorAction SilentlyContinue
-        Write-Host "      [+] Opera GX checked" -ForegroundColor Green
-    } else {
-        Write-Host "      [-] Opera GX not found" -ForegroundColor Gray
+            $connection.Close()
+            Remove-Item -Path $tempHistory -Force -ErrorAction SilentlyContinue
+            
+        } catch {
+            try {
+                $content = Get-Content -Path $historyPath -Raw -ErrorAction SilentlyContinue
+                
+                foreach ($site in $script:suspiciousSites) {
+                    $matches = [regex]::Matches($content, [regex]::Escape($site))
+                    if ($matches.Count -gt 0) {
+                        $url = "https://$site/"
+                        if ($script:foundUrls.ContainsKey($url)) {
+                            $script:foundUrls[$url].Count += $matches.Count
+                            if (-not ($script:foundUrls[$url].Browsers -contains $browserName)) {
+                                $script:foundUrls[$url].Browsers += @($browserName)
+                            }
+                        } else {
+                            $script:foundUrls[$url] = @{
+                                Count = $matches.Count
+                                Browsers = @($browserName)
+                            }
+                        }
+                        $script:totalFound += $matches.Count
+                    }
+                }
+            } catch { }
+        }
     }
     
-    # Результаты
-    Write-Host ""
-    Write-Host "  ═══════════════════════════════════════════════════════════════" -ForegroundColor Gray
+    # Пути к истории браузеров
+    $chromeHistory = "$env:LOCALAPPDATA\Google\Chrome\User Data\Default\History"
+    $edgeHistory = "$env:LOCALAPPDATA\Microsoft\Edge\User Data\Default\History"
+    $operaHistory = "$env:APPDATA\Opera Software\Opera Stable\History"
+    $operaGXHistory = "$env:APPDATA\Opera Software\Opera GX Stable\History"
+    $yandexHistory = "$env:LOCALAPPDATA\Yandex\YandexBrowser\User Data\Default\History"
+    $braveHistory = "$env:LOCALAPPDATA\BraveSoftware\Brave-Browser\User Data\Default\History"
+    $vivaldiHistory = "$env:LOCALAPPDATA\Vivaldi\User Data\Default\History"
+    $firefoxProfile = "$env:APPDATA\Mozilla\Firefox\Profiles"
+    
+    # Сканируем все браузеры
+    Search-BrowserHistory -historyPath $chromeHistory -browserName "Google Chrome"
+    Search-BrowserHistory -historyPath $edgeHistory -browserName "Microsoft Edge"
+    Search-BrowserHistory -historyPath $operaHistory -browserName "Opera"
+    Search-BrowserHistory -historyPath $operaGXHistory -browserName "Opera GX"
+    Search-BrowserHistory -historyPath $yandexHistory -browserName "Yandex Browser"
+    Search-BrowserHistory -historyPath $braveHistory -browserName "Brave"
+    Search-BrowserHistory -historyPath $vivaldiHistory -browserName "Vivaldi"
+    
+    # Firefox (несколько профилей)
+    if (Test-Path $firefoxProfile) {
+        $profiles = Get-ChildItem -Path $firefoxProfile -Directory -ErrorAction SilentlyContinue
+        foreach ($profile in $profiles) {
+            $firefoxHistory = Join-Path $profile.FullName "places.sqlite"
+            if (Test-Path $firefoxHistory) {
+                try {
+                    $tempHistory = "$env:TEMP\firefox_history_temp.db"
+                    Copy-Item -Path $firefoxHistory -Destination $tempHistory -Force -ErrorAction SilentlyContinue
+                    
+                    $content = Get-Content -Path $tempHistory -Raw -ErrorAction SilentlyContinue
+                    
+                    foreach ($site in $suspiciousSites) {
+                        $matches = [regex]::Matches($content, [regex]::Escape($site))
+                        if ($matches.Count -gt 0) {
+                            $url = "https://$site/"
+                            if ($foundUrls.ContainsKey($url)) {
+                                $foundUrls[$url].Count += $matches.Count
+                                if (-not ($foundUrls[$url].Browsers -contains "Firefox")) {
+                                    $foundUrls[$url].Browsers += @("Firefox")
+                                }
+                            } else {
+                                $foundUrls[$url] = @{
+                                    Count = $matches.Count
+                                    Browsers = @("Firefox")
+                                }
+                            }
+                            $totalFound += $matches.Count
+                        }
+                    }
+                    
+                    Remove-Item -Path $tempHistory -Force -ErrorAction SilentlyContinue
+                } catch { }
+            }
+        }
+    }
+    
     Write-Host ""
     
-    if ($detections.Count -gt 0) {
-        Write-Host "  [!] DETECTED: $($detections.Count) suspicious entries!" -ForegroundColor Red
+    # Показываем результаты
+    if ($foundUrls.Count -gt 0) {
+        Write-Host "  ╔═════════════════════════════════════════════════════════════════════════╗" -ForegroundColor Red
+        Write-Host "  ║                     🚨 SUSPICIOUS SITES DETECTED! 🚨                   ║" -ForegroundColor Red
+        Write-Host "  ╚═════════════════════════════════════════════════════════════════════════╝" -ForegroundColor Red
         Write-Host ""
         
-        $uniqueDetections = $detections | Select-Object -First 10
-        foreach ($detection in $uniqueDetections) {
-            Write-Host "  → $($detection.Browser)" -ForegroundColor Yellow
-            Write-Host "    Keyword: $($detection.Keyword)" -ForegroundColor Red
-            Write-Host "    URL: $($detection.URL.Substring(0, [Math]::Min(60, $detection.URL.Length)))..." -ForegroundColor Gray
-            Write-Host ""
+        $sortedUrls = $foundUrls.GetEnumerator() | Sort-Object -Property {$_.Value.Count} -Descending
+        
+        foreach ($entry in $sortedUrls) {
+            Write-Host "    • $($entry.Key)" -ForegroundColor White -NoNewline
+            Write-Host " - $($entry.Value.Count) visit(s)" -ForegroundColor Red
+            Write-Host "      Browser(s): $($entry.Value.Browsers -join ', ')" -ForegroundColor Gray
         }
         
-        if ($detections.Count -gt 10) {
-            Write-Host "  ... and $($detections.Count - 10) more detections" -ForegroundColor DarkGray
-        }
+        Write-Host ""
+        
     } else {
-        Write-Host "  ✓ No suspicious browser history detected" -ForegroundColor Green
+        Write-Host "  [✓] NO SUSPICIOUS ACTIVITY DETECTED" -ForegroundColor Green
+        Write-Host ""
+        Write-Host "    No visits found for known cheat websites." -ForegroundColor Gray
+        Write-Host ""
     }
     
     Write-Host ""
-    Write-Host "  ═══════════════════════════════════════════════════════════════" -ForegroundColor Gray
+    Write-Host "  ═══════════════════════════════════════════════════════════════════════" -ForegroundColor Gray
     Write-Host ""
     Read-Host "  Press Enter to return to menu"
-    
+
 # ============================================================================
 # SECTION 2: MODS ANALYZER
 # ============================================================================
@@ -278,127 +266,253 @@ if ($choice -eq "1") {
     Show-Logo
     
     Write-Host ""
-    Write-Host "  ╔═══════════════════════════════════════════════════════════════╗" -ForegroundColor Green
-    Write-Host "  ║                      MODS ANALYZER                            ║" -ForegroundColor Green
-    Write-Host "  ╚═══════════════════════════════════════════════════════════════╝" -ForegroundColor Green
+    Write-Host "  ╔═════════════════════════════════════════════════════════════════════════╗" -ForegroundColor Green
+    Write-Host "  ║                         MODS ANALYZER                                   ║" -ForegroundColor Green
+    Write-Host "  ╚═════════════════════════════════════════════════════════════════════════╝" -ForegroundColor Green
     Write-Host ""
     
-    $suspiciousMods = @()
-    $allMods = @()
+    Write-Host "  [~] Searching for Minecraft installations..." -ForegroundColor Cyan
+    Write-Host ""
     
-    # Список путей для поиска модов
-    $modsPaths = @(
+    $modsFolders = @()
+    $activeModsPath = $null
+    
+    # Проверка активного Minecraft
+    $javawProcesses = Get-Process -Name javaw -ErrorAction SilentlyContinue
+    
+    if ($javawProcesses) {
+        foreach ($proc in $javawProcesses) {
+            try {
+                $memoryGB = [math]::Round($proc.WorkingSet64 / 1GB, 2)
+                if ($memoryGB -lt 1) { continue }
+                
+                $cmdLine = (Get-WmiObject Win32_Process -Filter "ProcessId = $($proc.Id)").CommandLine
+                
+                if ($cmdLine -match '--gameDir\s+([^\s]+)') {
+                    $gameDir = $matches[1].Trim('"')
+                    $modsPath = Join-Path $gameDir "mods"
+                    if (Test-Path $modsPath) {
+                        $activeModsPath = $modsPath
+                        break
+                    }
+                }
+            } catch { }
+        }
+    }
+    
+    # Поиск всех папок с модами
+    $searchPaths = @(
         "$env:APPDATA\.minecraft\mods",
         "$env:APPDATA\.tlauncher\legacy\Minecraft\game\mods",
-        "$env:APPDATA\PrismLauncher\instances"
+        "$env:APPDATA\PrismLauncher\instances",
+        "C:\PulseVisuals\game\usermods"
     )
     
-    Write-Host "  [*] Scanning Minecraft installations..." -ForegroundColor Cyan
-    Write-Host ""
-    
-    foreach ($path in $modsPaths) {
+    foreach ($path in $searchPaths) {
         if (Test-Path $path) {
             if ($path -like "*PrismLauncher*") {
-                # Сканируем все инстансы PrismLauncher
                 $instances = Get-ChildItem $path -Directory -ErrorAction SilentlyContinue
                 foreach ($instance in $instances) {
                     $instanceMods = Join-Path $instance.FullName ".minecraft\mods"
                     if (Test-Path $instanceMods) {
                         $mods = Get-ChildItem $instanceMods -Filter "*.jar" -ErrorAction SilentlyContinue
-                        Write-Host "  [+] Found: $($instance.Name) ($($mods.Count) mods)" -ForegroundColor Green
-                        $allMods += $mods
+                        if ($mods.Count -gt 0) {
+                            $modsFolders += $instanceMods
+                        }
                     }
                 }
             } else {
-                $mods = Get-ChildItem $path -Filter "*.jar" -ErrorAction SilentlyContinue
-                $folderName = Split-Path $path -Leaf
-                if ($path -like "*tlauncher*") { $folderName = "TLauncher" }
-                if ($path -like "*.minecraft*") { $folderName = "Minecraft" }
-                Write-Host "  [+] Found: $folderName ($($mods.Count) mods)" -ForegroundColor Green
-                $allMods += $mods
-            }
-        }
-    }
-    
-    Write-Host ""
-    Write-Host "  [*] Analyzing $($allMods.Count) mods..." -ForegroundColor Cyan
-    Write-Host ""
-    
-    # Анализ модов
-    $cheatKeywords = @("cheat", "hack", "xray", "esp", "killaura", "fly", "speed", "reach", "nuker")
-    $knownCheats = @("vape", "liquid", "wurst", "meteor", "sigma", "flux", "jello", "aristois", "impact")
-    
-    foreach ($mod in $allMods) {
-        $isSuspicious = $false
-        $reason = ""
-        
-        # Проверка имени
-        foreach ($cheat in $knownCheats) {
-            if ($mod.Name -match $cheat) {
-                $isSuspicious = $true
-                $reason = "Known cheat client: $cheat"
-                break
-            }
-        }
-        
-        # Проверка ключевых слов
-        if (-not $isSuspicious) {
-            foreach ($keyword in $cheatKeywords) {
-                if ($mod.Name -match $keyword) {
-                    $isSuspicious = $true
-                    $reason = "Suspicious keyword: $keyword"
-                    break
+                $jars = Get-ChildItem $path -Filter "*.jar" -ErrorAction SilentlyContinue
+                if ($jars.Count -gt 0) {
+                    $modsFolders += $path
                 }
             }
         }
-        
-        # Проверка размера (слишком маленькие моды подозрительны)
-        if (-not $isSuspicious -and $mod.Length -lt 10KB) {
-            $isSuspicious = $true
-            $reason = "Suspiciously small file size"
-        }
-        
-        # Проверка обфускации (короткое имя)
-        if (-not $isSuspicious -and $mod.BaseName -match '^[a-z]{1,3}$') {
-            $isSuspicious = $true
-            $reason = "Obfuscated name pattern"
-        }
-        
-        if ($isSuspicious) {
-            $suspiciousMods += @{
-                Name = $mod.Name
-                Path = $mod.DirectoryName
-                Size = $mod.Length
-                Reason = $reason
-                Date = $mod.LastWriteTime
+    }
+    
+    # PulseVisuals обработка (только 1.21+)
+    if (Test-Path "C:\PulseVisuals\game\usermods") {
+        $versionFolders = Get-ChildItem "C:\PulseVisuals\game\usermods" -Directory -ErrorAction SilentlyContinue
+        foreach ($versionFolder in $versionFolders) {
+            if ($versionFolder.Name -ne '1.16.5') {
+                $jars = Get-ChildItem $versionFolder.FullName -Filter "*.jar" -ErrorAction SilentlyContinue
+                if ($jars.Count -gt 0) {
+                    $modsFolders += $versionFolder.FullName
+                }
             }
         }
     }
     
-    # Результаты
-    Write-Host "  ═══════════════════════════════════════════════════════════════" -ForegroundColor Gray
-    Write-Host ""
-    
-    if ($suspiciousMods.Count -gt 0) {
-        Write-Host "  [!] SUSPICIOUS MODS DETECTED: $($suspiciousMods.Count)" -ForegroundColor Red
-        Write-Host ""
-        
-        foreach ($mod in $suspiciousMods) {
-            Write-Host "  → $($mod.Name)" -ForegroundColor Red
-            Write-Host "    Reason: $($mod.Reason)" -ForegroundColor Yellow
-            Write-Host "    Size: $([math]::Round($mod.Size / 1KB, 2)) KB" -ForegroundColor Gray
-            Write-Host "    Path: $($mod.Path)" -ForegroundColor DarkGray
-            Write-Host ""
-        }
-    } else {
-        Write-Host "  ✓ All mods appear legitimate" -ForegroundColor Green
-        Write-Host "    Total mods scanned: $($allMods.Count)" -ForegroundColor Gray
+    if ($activeModsPath -and -not ($modsFolders -contains $activeModsPath)) {
+        $modsFolders = @($activeModsPath) + $modsFolders
     }
     
-    Write-Host ""
-    Write-Host "  ═══════════════════════════════════════════════════════════════" -ForegroundColor Gray
-    Write-Host ""
-    Read-Host "  Press Enter to return to menu"
+    if ($modsFolders.Count -eq 0) {
+        Write-Host "  [!] No mods folders found!" -ForegroundColor Gray
+        Write-Host ""
+        Read-Host "  Press Enter to return to menu"
+    } else {
+        if ($activeModsPath) {
+            Write-Host "  [!] Active Minecraft detected!" -ForegroundColor Green
+            Write-Host ""
+        }
+        
+        Write-Host "  Found $($modsFolders.Count) mods folder(s):" -ForegroundColor Green
+        Write-Host ""
+        
+        for ($i = 0; $i -lt $modsFolders.Count; $i++) {
+            $prefix = "  [$($i+1)] "
+            
+            if ($activeModsPath -and $modsFolders[$i] -eq $activeModsPath) {
+                Write-Host $prefix -ForegroundColor Cyan -NoNewline
+                Write-Host "[ACTIVE] " -ForegroundColor Green -NoNewline
+                Write-Host $modsFolders[$i] -ForegroundColor White
+            } else {
+                Write-Host $prefix -ForegroundColor White -NoNewline
+                Write-Host $modsFolders[$i] -ForegroundColor Gray
+            }
+        }
+        
+        Write-Host ""
+        Write-Host "  [0] Custom folder" -ForegroundColor Yellow
+        Write-Host ""
+        
+        $folderChoice = Read-Host "  Select folder"
+        
+        if ([string]::IsNullOrWhiteSpace($folderChoice)) {
+            continue
+        }
+        
+        $selectedFolder = $null
+        
+        if ($folderChoice -eq "0") {
+            $customPath = Read-Host "  Enter custom mods folder path"
+            
+            if ([string]::IsNullOrWhiteSpace($customPath)) {
+                continue
+            }
+            
+            if (Test-Path $customPath) {
+                $testJars = Get-ChildItem -Path $customPath -Filter "*.jar" -ErrorAction SilentlyContinue
+                
+                if ($testJars.Count -gt 0) {
+                    $selectedFolder = $customPath
+                    Write-Host ""
+                    Write-Host "  [✓] Found $($testJars.Count) JAR file(s)" -ForegroundColor Green
+                    Write-Host ""
+                } else {
+                    Write-Host ""
+                    Write-Host "  [!] No JAR files found!" -ForegroundColor Red
+                    Write-Host ""
+                    Read-Host "  Press Enter to return"
+                    continue
+                }
+            } else {
+                Write-Host ""
+                Write-Host "  [!] Path not found!" -ForegroundColor Red
+                Write-Host ""
+                Read-Host "  Press Enter to return"
+                continue
+            }
+        }
+        elseif ($folderChoice -match '^\d+$' -and [int]$folderChoice -gt 0 -and [int]$folderChoice -le $modsFolders.Count) {
+            $selectedFolder = $modsFolders[[int]$folderChoice - 1]
+        }
+        else {
+            continue
+        }
+        
+        # Сканирование выбранной папки
+        if ($selectedFolder) {
+            Write-Host ""
+            Write-Host "  [~] Scanning: $selectedFolder" -ForegroundColor Cyan
+            Write-Host ""
+            
+            $jarFiles = Get-ChildItem -Path $selectedFolder -Filter "*.jar" -ErrorAction SilentlyContinue
+            
+            if ($jarFiles.Count -eq 0) {
+                Write-Host "  [!] No JAR files found" -ForegroundColor Gray
+            } else {
+                Write-Host "  Found $($jarFiles.Count) JAR file(s)" -ForegroundColor Gray
+                Write-Host ""
+                Write-Host "  [~] Analyzing mods..." -ForegroundColor Cyan
+                Write-Host ""
+                
+                Add-Type -Assembly System.IO.Compression.FileSystem
+                
+                $cheatStrings = @(
+                    'AutoCrystal','AutoAnchor','AutoTotem','AimAssist','TriggerBot',
+                    'Killaura','AutoClicker','AutoPot','ShieldBreaker','FakeLag',
+                    'AutoDoubleHand','MaceSwap','AutoWeb','LiminarClient',
+                    'BlockESP','ElytraSwap','NoSlow','WallHack','ChestStealer',
+                    'ReplayMod','FlashBack','XRay','Minimap','Voxelmap','JourneyMap',
+                    'Baritone','Schematica','Litematica','FreeCam','WorldEdit',
+                    'Pojav','FCL','MobileEmulator'
+                )
+                
+                $suspiciousMods = @()
+                
+                foreach ($jar in $jarFiles) {
+                    $isSuspicious = $false
+                    $reason = ""
+                    
+                    # Проверка имени файла
+                    foreach ($cheatString in $cheatStrings) {
+                        if ($jar.Name -match $cheatString) {
+                            $isSuspicious = $true
+                            $reason = "Suspicious pattern: $cheatString"
+                            break
+                        }
+                    }
+                    
+                    # Проверка размера
+                    if (-not $isSuspicious -and $jar.Length -lt 10KB) {
+                        $isSuspicious = $true
+                        $reason = "Suspiciously small file size"
+                    }
+                    
+                    # Проверка обфускации
+                    if (-not $isSuspicious -and $jar.BaseName -match '^[a-z]{1,3}$') {
+                        $isSuspicious = $true
+                        $reason = "Obfuscated name pattern"
+                    }
+                    
+                    if ($isSuspicious) {
+                        $suspiciousMods += @{
+                            Name = $jar.Name
+                            Size = $jar.Length
+                            Reason = $reason
+                        }
+                    }
+                }
+                
+                # Результаты
+                Write-Host "  ═══════════════════════════════════════════════════════════════════════" -ForegroundColor Gray
+                Write-Host ""
+                
+                if ($suspiciousMods.Count -gt 0) {
+                    Write-Host "  [!] SUSPICIOUS MODS DETECTED: $($suspiciousMods.Count)" -ForegroundColor Red
+                    Write-Host ""
+                    
+                    foreach ($mod in $suspiciousMods) {
+                        Write-Host "  → $($mod.Name)" -ForegroundColor Red
+                        Write-Host "    Reason: $($mod.Reason)" -ForegroundColor Yellow
+                        Write-Host "    Size: $([math]::Round($mod.Size / 1KB, 2)) KB" -ForegroundColor Gray
+                        Write-Host ""
+                    }
+                } else {
+                    Write-Host "  ✓ All mods appear legitimate" -ForegroundColor Green
+                    Write-Host "    Total mods scanned: $($jarFiles.Count)" -ForegroundColor Gray
+                }
+                
+                Write-Host ""
+                Write-Host "  ═══════════════════════════════════════════════════════════════════════" -ForegroundColor Gray
+                Write-Host ""
+            }
+            
+            Read-Host "  Press Enter to return to menu"
+        }
+    }
 
 # ============================================================================
 # EXIT
