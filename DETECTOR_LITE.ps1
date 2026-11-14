@@ -270,6 +270,7 @@ while ($true) {
     Write-Host ""
     Write-Host "  [1] Browser History Scanner" -ForegroundColor White
     Write-Host "  [2] Mods Analyzer" -ForegroundColor White
+    Write-Host "  [3] Tools Launcher" -ForegroundColor White
     Write-Host ""
     Write-Host "  [0] Exit" -ForegroundColor DarkGray
     Write-Host ""
@@ -1292,6 +1293,203 @@ if ($choice -eq "1") {
             Clear-Host
             Show-Logo
         }
+    }
+    
+} elseif ($choice -eq "3") {
+    Clear-Host
+    Show-Logo
+    
+    Write-Host "  ╔═════════════════════════════════════════════════════════════════════════╗" -ForegroundColor Gray
+    Write-Host "  ║                         TOOLS LAUNCHER                                  ║" -ForegroundColor Gray
+    Write-Host "  ╚═════════════════════════════════════════════════════════════════════════╝" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "  Select tool to launch:" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "  [1] Everything 1.5a   - Fast file search engine" -ForegroundColor White
+    Write-Host "  [2] JournalTrace      - USB/File activity tracker" -ForegroundColor White
+    Write-Host "  [3] System Informer   - Advanced task manager" -ForegroundColor White
+    Write-Host ""
+    Write-Host "  [0] Back to menu" -ForegroundColor DarkGray
+    Write-Host ""
+    
+    $toolChoice = Read-Host "Enter choice"
+    
+    $toolsDir = Join-Path $env:TEMP "DetectorTools"
+    if (-not (Test-Path $toolsDir)) {
+        New-Item -ItemType Directory -Path $toolsDir -Force | Out-Null
+    }
+    
+    if ($toolChoice -eq "1") {
+        # Everything
+        Write-Host ""
+        Write-Host "  [~] Everything 1.5a" -ForegroundColor Cyan
+        
+        $everythingPath = Join-Path $toolsDir "Everything.exe"
+        $everythingInstaller = Join-Path $toolsDir "Everything-Setup.exe"
+        
+        if (Test-Path $everythingPath) {
+            Write-Host "  [✓] Found existing installation" -ForegroundColor Green
+            Write-Host "  [~] Launching Everything..." -ForegroundColor Gray
+            Start-Process $everythingPath
+            Write-Host "  [✓] Launched!" -ForegroundColor Green
+        } else {
+            Write-Host "  [!] Not found, downloading..." -ForegroundColor Yellow
+            try {
+                $url = "https://www.voidtools.com/Everything-1.5.0.1409a.x64-Setup.exe"
+                Write-Host "  [~] Downloading from voidtools.com..." -ForegroundColor Gray
+                
+                $webClient = New-Object System.Net.WebClient
+                $webClient.DownloadFile($url, $everythingInstaller)
+                
+                Write-Host "  [✓] Downloaded!" -ForegroundColor Green
+                Write-Host "  [~] Running installer..." -ForegroundColor Gray
+                Write-Host ""
+                Write-Host "  ⚠️  IMPORTANT: Install to default location!" -ForegroundColor Yellow
+                Write-Host ""
+                
+                Start-Process $everythingInstaller -Wait
+                
+                # Проверяем установку в стандартных местах
+                $possiblePaths = @(
+                    "C:\Program Files\Everything\Everything.exe",
+                    "C:\Program Files (x86)\Everything\Everything.exe",
+                    (Join-Path $env:LOCALAPPDATA "Programs\Everything\Everything.exe")
+                )
+                
+                $found = $false
+                foreach ($path in $possiblePaths) {
+                    if (Test-Path $path) {
+                        Write-Host "  [✓] Installed successfully!" -ForegroundColor Green
+                        Write-Host "  [~] Launching Everything..." -ForegroundColor Gray
+                        Start-Process $path
+                        $found = $true
+                        break
+                    }
+                }
+                
+                if (-not $found) {
+                    Write-Host "  [!] Installation completed but executable not found" -ForegroundColor Yellow
+                    Write-Host "  [!] Please launch Everything manually" -ForegroundColor Yellow
+                }
+                
+            } catch {
+                Write-Host "  [✗] Download failed: $_" -ForegroundColor Red
+            }
+        }
+        
+        Write-Host ""
+        Read-Host "Press Enter to continue"
+        Clear-Host
+        Show-Logo
+        
+    } elseif ($toolChoice -eq "2") {
+        # JournalTrace
+        Write-Host ""
+        Write-Host "  [~] JournalTrace" -ForegroundColor Cyan
+        
+        $jtPath = Join-Path $toolsDir "JournalTrace.exe"
+        
+        if (Test-Path $jtPath) {
+            Write-Host "  [✓] Found existing installation" -ForegroundColor Green
+            Write-Host "  [~] Launching JournalTrace..." -ForegroundColor Gray
+            Start-Process $jtPath
+            Write-Host "  [✓] Launched!" -ForegroundColor Green
+        } else {
+            Write-Host "  [!] Not found, downloading..." -ForegroundColor Yellow
+            try {
+                $url = "https://github.com/ponei/JournalTrace/releases/download/1.0/JournalTrace.exe"
+                Write-Host "  [~] Downloading from GitHub..." -ForegroundColor Gray
+                
+                $webClient = New-Object System.Net.WebClient
+                $webClient.DownloadFile($url, $jtPath)
+                
+                Write-Host "  [✓] Downloaded!" -ForegroundColor Green
+                Write-Host "  [~] Launching JournalTrace..." -ForegroundColor Gray
+                Start-Process $jtPath
+                Write-Host "  [✓] Launched!" -ForegroundColor Green
+                
+            } catch {
+                Write-Host "  [✗] Download failed: $_" -ForegroundColor Red
+            }
+        }
+        
+        Write-Host ""
+        Read-Host "Press Enter to continue"
+        Clear-Host
+        Show-Logo
+        
+    } elseif ($toolChoice -eq "3") {
+        # System Informer
+        Write-Host ""
+        Write-Host "  [~] System Informer" -ForegroundColor Cyan
+        
+        $siPath = Join-Path $toolsDir "SystemInformer.exe"
+        $siInstaller = Join-Path $toolsDir "SystemInformer-Setup.exe"
+        
+        if (Test-Path $siPath) {
+            Write-Host "  [✓] Found existing installation" -ForegroundColor Green
+            Write-Host "  [~] Launching System Informer..." -ForegroundColor Gray
+            Start-Process $siPath
+            Write-Host "  [✓] Launched!" -ForegroundColor Green
+        } else {
+            Write-Host "  [!] Not found, downloading..." -ForegroundColor Yellow
+            try {
+                $url = "https://github.com/winsiderss/si-builds/releases/download/4.0.26255.346/systeminformer-build-canary-setup.exe"
+                Write-Host "  [~] Downloading from GitHub..." -ForegroundColor Gray
+                
+                $webClient = New-Object System.Net.WebClient
+                $webClient.DownloadFile($url, $siInstaller)
+                
+                Write-Host "  [✓] Downloaded!" -ForegroundColor Green
+                Write-Host "  [~] Running installer..." -ForegroundColor Gray
+                Write-Host ""
+                Write-Host "  ⚠️  IMPORTANT: Install to default location!" -ForegroundColor Yellow
+                Write-Host ""
+                
+                Start-Process $siInstaller -Wait
+                
+                # Проверяем установку в стандартных местах
+                $possiblePaths = @(
+                    "C:\Program Files\SystemInformer\SystemInformer.exe",
+                    "C:\Program Files (x86)\SystemInformer\SystemInformer.exe",
+                    (Join-Path $env:LOCALAPPDATA "Programs\SystemInformer\SystemInformer.exe")
+                )
+                
+                $found = $false
+                foreach ($path in $possiblePaths) {
+                    if (Test-Path $path) {
+                        Write-Host "  [✓] Installed successfully!" -ForegroundColor Green
+                        Write-Host "  [~] Launching System Informer..." -ForegroundColor Gray
+                        Start-Process $path
+                        $found = $true
+                        break
+                    }
+                }
+                
+                if (-not $found) {
+                    Write-Host "  [!] Installation completed but executable not found" -ForegroundColor Yellow
+                    Write-Host "  [!] Please launch System Informer manually" -ForegroundColor Yellow
+                }
+                
+            } catch {
+                Write-Host "  [✗] Download failed: $_" -ForegroundColor Red
+            }
+        }
+        
+        Write-Host ""
+        Read-Host "Press Enter to continue"
+        Clear-Host
+        Show-Logo
+        
+    } elseif ($toolChoice -eq "0") {
+        Clear-Host
+        Show-Logo
+    } else {
+        Write-Host ""
+        Write-Host "  [!] Invalid choice!" -ForegroundColor Red
+        Start-Sleep -Seconds 1
+        Clear-Host
+        Show-Logo
     }
     
 } elseif ($choice -eq "0") {
