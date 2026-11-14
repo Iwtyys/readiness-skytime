@@ -1325,7 +1325,7 @@ if ($choice -eq "1") {
         Write-Host "  [~] Everything 1.5a" -ForegroundColor Cyan
         
         $everythingPath = Join-Path $toolsDir "Everything.exe"
-        $everythingInstaller = Join-Path $toolsDir "Everything-Setup.exe"
+        $everythingZip = Join-Path $toolsDir "Everything.zip"
         
         if (Test-Path $everythingPath) {
             Write-Host "  [✓] Found existing installation" -ForegroundColor Green
@@ -1333,47 +1333,38 @@ if ($choice -eq "1") {
             Start-Process $everythingPath
             Write-Host "  [✓] Launched!" -ForegroundColor Green
         } else {
-            Write-Host "  [!] Not found, downloading..." -ForegroundColor Yellow
+            Write-Host "  [!] Not found, downloading portable version..." -ForegroundColor Yellow
             try {
-                $url = "https://www.voidtools.com/Everything-1.5.0.1409a.x64-Setup.exe"
+                # Скачиваем portable ZIP версию
+                $url = "https://www.voidtools.com/Everything-1.4.1.1024.x64.zip"
                 Write-Host "  [~] Downloading from voidtools.com..." -ForegroundColor Gray
                 
                 $webClient = New-Object System.Net.WebClient
-                $webClient.DownloadFile($url, $everythingInstaller)
+                $webClient.DownloadFile($url, $everythingZip)
                 
                 Write-Host "  [✓] Downloaded!" -ForegroundColor Green
-                Write-Host "  [~] Running installer..." -ForegroundColor Gray
-                Write-Host ""
-                Write-Host "  ⚠️  IMPORTANT: Install to default location!" -ForegroundColor Yellow
-                Write-Host ""
+                Write-Host "  [~] Extracting..." -ForegroundColor Gray
                 
-                Start-Process $everythingInstaller -Wait
+                # Распаковываем
+                Add-Type -Assembly System.IO.Compression.FileSystem
+                [System.IO.Compression.ZipFile]::ExtractToDirectory($everythingZip, $toolsDir)
                 
-                # Проверяем установку в стандартных местах
-                $possiblePaths = @(
-                    "C:\Program Files\Everything\Everything.exe",
-                    "C:\Program Files (x86)\Everything\Everything.exe",
-                    (Join-Path $env:LOCALAPPDATA "Programs\Everything\Everything.exe")
-                )
+                Write-Host "  [✓] Extracted!" -ForegroundColor Green
                 
-                $found = $false
-                foreach ($path in $possiblePaths) {
-                    if (Test-Path $path) {
-                        Write-Host "  [✓] Installed successfully!" -ForegroundColor Green
-                        Write-Host "  [~] Launching Everything..." -ForegroundColor Gray
-                        Start-Process $path
-                        $found = $true
-                        break
-                    }
-                }
+                # Удаляем ZIP
+                Remove-Item $everythingZip -Force -ErrorAction SilentlyContinue
                 
-                if (-not $found) {
-                    Write-Host "  [!] Installation completed but executable not found" -ForegroundColor Yellow
-                    Write-Host "  [!] Please launch Everything manually" -ForegroundColor Yellow
+                if (Test-Path $everythingPath) {
+                    Write-Host "  [✓] Ready!" -ForegroundColor Green
+                    Write-Host "  [~] Launching Everything..." -ForegroundColor Gray
+                    Start-Process $everythingPath
+                    Write-Host "  [✓] Launched!" -ForegroundColor Green
+                } else {
+                    Write-Host "  [✗] Extraction failed - executable not found" -ForegroundColor Red
                 }
                 
             } catch {
-                Write-Host "  [✗] Download failed: $_" -ForegroundColor Red
+                Write-Host "  [✗] Error: $_" -ForegroundColor Red
             }
         }
         
