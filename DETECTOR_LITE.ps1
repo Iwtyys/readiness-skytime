@@ -14,15 +14,15 @@ Clear-Host
 
 function Show-Logo {
     Write-Host ""
-    Write-Host "  ╔═══════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host "  ║                                                               ║" -ForegroundColor Cyan
-    Write-Host "  ║                    DETECTOR LITE v2.0                         ║" -ForegroundColor Cyan
-    Write-Host "  ║                                                               ║" -ForegroundColor Cyan
-    Write-Host "  ║          Browser & Mods Cheat Detection System                ║" -ForegroundColor Cyan
-    Write-Host "  ║                                                               ║" -ForegroundColor Cyan
-    Write-Host "  ╚═══════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+    Write-Host "  =============================================================" -ForegroundColor Cyan
+    Write-Host "                                                               " -ForegroundColor Cyan
+    Write-Host "                    DETECTOR LITE v2.0                         " -ForegroundColor Cyan
+    Write-Host "                                                               " -ForegroundColor Cyan
+    Write-Host "          Browser & Mods Cheat Detection System                " -ForegroundColor Cyan
+    Write-Host "                                                               " -ForegroundColor Cyan
+    Write-Host "  =============================================================" -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "  ───────────────────────────────────────────────────────────────" -ForegroundColor Gray
+    Write-Host "  -------------------------------------------------------------" -ForegroundColor Gray
     Write-Host ""
     Write-Host "  Select scan mode:" -ForegroundColor White
     Write-Host ""
@@ -31,7 +31,7 @@ function Show-Logo {
     Write-Host ""
     Write-Host "  [0] Exit" -ForegroundColor DarkGray
     Write-Host ""
-    Write-Host "  ───────────────────────────────────────────────────────────────" -ForegroundColor Gray
+    Write-Host "  -------------------------------------------------------------" -ForegroundColor Gray
     Write-Host ""
 }
 
@@ -54,9 +54,9 @@ if ($choice -eq "1") {
     Show-Logo
     
     Write-Host ""
-    Write-Host "  ╔═════════════════════════════════════════════════════════════════════════╗" -ForegroundColor Yellow
-    Write-Host "  ║                    BROWSER HISTORY SCANNER                              ║" -ForegroundColor Yellow
-    Write-Host "  ╚═════════════════════════════════════════════════════════════════════════╝" -ForegroundColor Yellow
+    Write-Host "  =========================================================================" -ForegroundColor Yellow
+    Write-Host "                    BROWSER HISTORY SCANNER                              " -ForegroundColor Yellow
+    Write-Host "  =========================================================================" -ForegroundColor Yellow
     Write-Host ""
     
     # Список подозрительных сайтов
@@ -230,9 +230,9 @@ if ($choice -eq "1") {
     
     # Показываем результаты
     if ($foundUrls.Count -gt 0) {
-        Write-Host "  ╔═════════════════════════════════════════════════════════════════════════╗" -ForegroundColor Red
-        Write-Host "  ║                     🚨 SUSPICIOUS SITES DETECTED! 🚨                   ║" -ForegroundColor Red
-        Write-Host "  ╚═════════════════════════════════════════════════════════════════════════╝" -ForegroundColor Red
+        Write-Host "  =========================================================================" -ForegroundColor Red
+        Write-Host "                     SUSPICIOUS SITES DETECTED!                          " -ForegroundColor Red
+        Write-Host "  =========================================================================" -ForegroundColor Red
         Write-Host ""
         
         $sortedUrls = $foundUrls.GetEnumerator() | Sort-Object -Property {$_.Value.Count} -Descending
@@ -253,7 +253,7 @@ if ($choice -eq "1") {
     }
     
     Write-Host ""
-    Write-Host "  ═══════════════════════════════════════════════════════════════════════" -ForegroundColor Gray
+    Write-Host "  =======================================================================" -ForegroundColor Gray
     Write-Host ""
     Read-Host "  Press Enter to return to menu"
 
@@ -266,9 +266,9 @@ if ($choice -eq "1") {
     Show-Logo
     
     Write-Host ""
-    Write-Host "  ╔═════════════════════════════════════════════════════════════════════════╗" -ForegroundColor Green
-    Write-Host "  ║                         MODS ANALYZER                                   ║" -ForegroundColor Green
-    Write-Host "  ╚═════════════════════════════════════════════════════════════════════════╝" -ForegroundColor Green
+    Write-Host "  =========================================================================" -ForegroundColor Green
+    Write-Host "                         MODS ANALYZER                                   " -ForegroundColor Green
+    Write-Host "  =========================================================================" -ForegroundColor Green
     Write-Host ""
     
     Write-Host "  [~] Searching for Minecraft installations..." -ForegroundColor Cyan
@@ -487,7 +487,7 @@ if ($choice -eq "1") {
                 }
                 
                 # Результаты
-                Write-Host "  ═══════════════════════════════════════════════════════════════════════" -ForegroundColor Gray
+                Write-Host "  =======================================================================" -ForegroundColor Gray
                 Write-Host ""
                 
                 if ($suspiciousMods.Count -gt 0) {
@@ -506,7 +506,7 @@ if ($choice -eq "1") {
                 }
                 
                 Write-Host ""
-                Write-Host "  ═══════════════════════════════════════════════════════════════════════" -ForegroundColor Gray
+                Write-Host "  =======================================================================" -ForegroundColor Gray
                 Write-Host ""
             }
             
