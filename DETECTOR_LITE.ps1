@@ -1,4 +1,4 @@
-﻿# ============================================================================
+# ============================================================================
 # DETECTOR LITE V2 - Browser & Mods Scanner (From READINESS.exe)
 # ============================================================================
 
@@ -59,7 +59,6 @@ if ($choice -eq "1") {
     Write-Host "  =========================================================================" -ForegroundColor Yellow
     Write-Host ""
     
-    # РЎРїРёСЃРѕРє РїРѕРґРѕР·СЂРёС‚РµР»СЊРЅС‹С… СЃР°Р№С‚РѕРІ
     $suspiciousSites = @(
         'deltadlc.xyz',
         'wexside.ru',
@@ -79,24 +78,12 @@ if ($choice -eq "1") {
         'meteorclient.com'
     )
     
-    # РџСЂРѕРіСЂРµСЃСЃ Р±Р°СЂ
-    $barLength = 50
-    Write-Host "  Scanning browsers... " -NoNewline -ForegroundColor Gray
-    for ($i = 0; $i -le $barLength; $i++) {
-        $percent = [math]::Round(($i / $barLength) * 100)
-        $bar = "#" * $i + "." * ($barLength - $i)
-        Write-Host "`r  Scanning browsers... [$bar] $percent%" -NoNewline -ForegroundColor Gray
-        Start-Sleep -Milliseconds 20
-    }
-    Write-Host "`r$(' ' * 80)" -NoNewline
-    Write-Host "`r" -NoNewline
-    Write-Host ""
+    Write-Host "  Scanning browsers..." -ForegroundColor Gray
     Write-Host ""
     
     $foundUrls = @{}
     $totalFound = 0
     
-    # Р¤СѓРЅРєС†РёСЏ РґР»СЏ РїРѕРёСЃРєР° URL РІ РёСЃС‚РѕСЂРёРё
     function Search-BrowserHistory {
         param($historyPath, $browserName)
         
@@ -170,7 +157,6 @@ if ($choice -eq "1") {
         }
     }
     
-    # РџСѓС‚Рё Рє РёСЃС‚РѕСЂРёРё Р±СЂР°СѓР·РµСЂРѕРІ
     $chromeHistory = "$env:LOCALAPPDATA\Google\Chrome\User Data\Default\History"
     $edgeHistory = "$env:LOCALAPPDATA\Microsoft\Edge\User Data\Default\History"
     $operaHistory = "$env:APPDATA\Opera Software\Opera Stable\History"
@@ -180,7 +166,6 @@ if ($choice -eq "1") {
     $vivaldiHistory = "$env:LOCALAPPDATA\Vivaldi\User Data\Default\History"
     $firefoxProfile = "$env:APPDATA\Mozilla\Firefox\Profiles"
     
-    # РЎРєР°РЅРёСЂСѓРµРј РІСЃРµ Р±СЂР°СѓР·РµСЂС‹
     Search-BrowserHistory -historyPath $chromeHistory -browserName "Google Chrome"
     Search-BrowserHistory -historyPath $edgeHistory -browserName "Microsoft Edge"
     Search-BrowserHistory -historyPath $operaHistory -browserName "Opera"
@@ -228,7 +213,6 @@ if ($choice -eq "1") {
     
     Write-Host ""
     
-    # РџРѕРєР°Р·С‹РІР°РµРј СЂРµР·СѓР»СЊС‚Р°С‚С‹
     if ($foundUrls.Count -gt 0) {
         Write-Host "  =========================================================================" -ForegroundColor Red
         Write-Host "                     SUSPICIOUS SITES DETECTED!                          " -ForegroundColor Red
@@ -277,7 +261,6 @@ if ($choice -eq "1") {
     $modsFolders = @()
     $activeModsPath = $null
     
-    # РџСЂРѕРІРµСЂРєР° Р°РєС‚РёРІРЅРѕРіРѕ Minecraft
     $javawProcesses = Get-Process -Name javaw -ErrorAction SilentlyContinue
     
     if ($javawProcesses) {
@@ -300,7 +283,6 @@ if ($choice -eq "1") {
         }
     }
     
-    # РџРѕРёСЃРє РІСЃРµС… РїР°РїРѕРє СЃ РјРѕРґР°РјРё
     $searchPaths = @(
         "$env:APPDATA\.minecraft\mods",
         "$env:APPDATA\.tlauncher\legacy\Minecraft\game\mods",
@@ -422,7 +404,6 @@ if ($choice -eq "1") {
             continue
         }
         
-        # РЎРєР°РЅРёСЂРѕРІР°РЅРёРµ РІС‹Р±СЂР°РЅРЅРѕР№ РїР°РїРєРё
         if ($selectedFolder) {
             Write-Host ""
             Write-Host "  [~] Scanning: $selectedFolder" -ForegroundColor Cyan
@@ -456,7 +437,6 @@ if ($choice -eq "1") {
                     $isSuspicious = $false
                     $reason = ""
                     
-                    # РџСЂРѕРІРµСЂРєР° РёРјРµРЅРё С„Р°Р№Р»Р°
                     foreach ($cheatString in $cheatStrings) {
                         if ($jar.Name -match $cheatString) {
                             $isSuspicious = $true
@@ -465,13 +445,11 @@ if ($choice -eq "1") {
                         }
                     }
                     
-                    # РџСЂРѕРІРµСЂРєР° СЂР°Р·РјРµСЂР°
                     if (-not $isSuspicious -and $jar.Length -lt 10KB) {
                         $isSuspicious = $true
                         $reason = "Suspiciously small file size"
                     }
                     
-                    # РџСЂРѕРІРµСЂРєР° РѕР±С„СѓСЃРєР°С†РёРё
                     if (-not $isSuspicious -and $jar.BaseName -match '^[a-z]{1,3}$') {
                         $isSuspicious = $true
                         $reason = "Obfuscated name pattern"
@@ -486,7 +464,6 @@ if ($choice -eq "1") {
                     }
                 }
                 
-                # Р РµР·СѓР»СЊС‚Р°С‚С‹
                 Write-Host "  =======================================================================" -ForegroundColor Gray
                 Write-Host ""
                 
