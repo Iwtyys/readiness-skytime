@@ -49,7 +49,7 @@ while ($true) {
 # SECTION 1: BROWSER HISTORY SCANNER
 # ============================================================================
 
-ifelseif ($choice -eq "6") {
+if ($choice -eq "1") {
     Clear-Host
     Show-Logo
     
