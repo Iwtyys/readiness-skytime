@@ -1387,31 +1387,54 @@ if ($choice -eq "1") {
         Write-Host ""
         Write-Host "  [~] JournalTrace" -ForegroundColor Cyan
         
-        $jtPath = Join-Path $toolsDir "JournalTrace.exe"
+        # Всегда используем C:\JournalTrace.exe
+        $jtPathC = "C:\JournalTrace.exe"
+        $jtTempPath = Join-Path $toolsDir "JournalTrace.exe"
         
-        if (Test-Path $jtPath) {
-            Write-Host "  [✓] Found existing installation" -ForegroundColor Green
-            Write-Host "  [~] Launching JournalTrace..." -ForegroundColor Gray
-            Start-Process $jtPath
-            Write-Host "  [✓] Launched!" -ForegroundColor Green
-        } else {
+        # Проверяем есть ли файл в TEMP
+        $needDownload = -not (Test-Path $jtTempPath)
+        
+        if ($needDownload) {
             Write-Host "  [!] Not found, downloading..." -ForegroundColor Yellow
             try {
                 $url = "https://github.com/ponei/JournalTrace/releases/download/1.0/JournalTrace.exe"
                 Write-Host "  [~] Downloading from GitHub..." -ForegroundColor Gray
                 
                 $webClient = New-Object System.Net.WebClient
-                $webClient.DownloadFile($url, $jtPath)
+                $webClient.DownloadFile($url, $jtTempPath)
                 
                 Write-Host "  [✓] Downloaded!" -ForegroundColor Green
-                Write-Host "  [~] Launching JournalTrace..." -ForegroundColor Gray
-                Start-Process $jtPath
-                Write-Host "  [✓] Launched!" -ForegroundColor Green
                 
             } catch {
                 Write-Host "  [✗] Download failed: $_" -ForegroundColor Red
+                Write-Host ""
+                Read-Host "Press Enter to continue"
+                Clear-Host
+                Show-Logo
+                continue
             }
+        } else {
+            Write-Host "  [✓] Found in cache" -ForegroundColor Green
         }
+        
+        # ВСЕГДА копируем в C:\
+        Write-Host "  [~] Copying to C:\JournalTrace.exe..." -ForegroundColor Gray
+        try {
+            Copy-Item -Path $jtTempPath -Destination $jtPathC -Force
+            Write-Host "  [✓] Copied to C:\" -ForegroundColor Green
+        } catch {
+            Write-Host "  [✗] Failed to copy: $_" -ForegroundColor Red
+            Write-Host ""
+            Read-Host "Press Enter to continue"
+            Clear-Host
+            Show-Logo
+            continue
+        }
+        
+        # Запускаем с C:\
+        Write-Host "  [~] Launching JournalTrace from C:\..." -ForegroundColor Gray
+        Start-Process $jtPathC
+        Write-Host "  [✓] Launched!" -ForegroundColor Green
         
         Write-Host ""
         Read-Host "Press Enter to continue"
