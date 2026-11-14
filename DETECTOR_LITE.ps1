@@ -309,7 +309,7 @@ ifelseif ($choice -eq "6") {
     Show-Logo
     
 
-} elseifchoice -eq "2") {
+} elseif ($choice -eq "2") {
     Clear-Host
     Show-Logo
     
