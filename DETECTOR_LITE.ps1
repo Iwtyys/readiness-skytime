@@ -1,5 +1,5 @@
 ﻿# ============================================================================
-# DETECTOR LITE V2 - Browser & Mods Scanner (From READINESS.exe)
+# DETECTOR LITE - Browser & Mods Scanner (From READINESS.exe)
 # ============================================================================
 
 $ErrorActionPreference = "SilentlyContinue"
@@ -7,593 +7,432 @@ $Host.UI.RawUI.WindowTitle = 'Detector Lite v2.0'
 $Host.UI.RawUI.BackgroundColor = "Black"
 $Host.UI.RawUI.ForegroundColor = "White"
 Clear-Host
-
-# ============================================================================
-# LOGO
-# ============================================================================
-
 function Show-Logo {
     Write-Host ""
-    Write-Host "  =============================================================" -ForegroundColor Cyan
-    Write-Host "                                                               " -ForegroundColor Cyan
-    Write-Host "                    DETECTOR LITE v2.0                         " -ForegroundColor Cyan
-    Write-Host "                                                               " -ForegroundColor Cyan
-    Write-Host "          Browser & Mods Cheat Detection System                " -ForegroundColor Cyan
-    Write-Host "                                                               " -ForegroundColor Cyan
-    Write-Host "  =============================================================" -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "  -------------------------------------------------------------" -ForegroundColor Gray
+    Write-Centered "######= #######= #####= ######= ##=###=   ##=#######=#######=#######=" -color DarkGray
+    Write-Centered "##===##=##======##===##=##===##=##|####=  ##|##======##======##======" -color DarkGray
+    Write-Centered "######==#####=  #######|##|  ##|##|##=##= ##|#####=  #######=#######=" -color Gray
+    Write-Centered "##===##=##====  ##===##|##|  ##|##|##|=##=##|##====  =====##|=====##|" -color Gray
+    Write-Centered "##|  ##|#######=##|  ##|######==##|##| =####|#######=#######|#######|" -color White
+    Write-Centered "===  ==============  ========== ======  =============================" -color White
     Write-Host ""
-    Write-Host "  Select scan mode:" -ForegroundColor White
     Write-Host ""
-    Write-Host "  [1] Browser History Scanner" -ForegroundColor White
-    Write-Host "  [2] Mods Analyzer" -ForegroundColor White
+    Write-Centered "=======================================================" -color DarkGray
+    Write-Centered "|         Created by: IwTu              v1.7.4       |" -color Gray
+    Write-Centered "=======================================================" -color DarkGray
     Write-Host ""
-    Write-Host "  [0] Exit" -ForegroundColor DarkGray
-    Write-Host ""
-    Write-Host "  -------------------------------------------------------------" -ForegroundColor Gray
+    Write-FullLine -char "-" -color DarkGray
     Write-Host ""
 }
 
-# ============================================================================
-# MAIN LOOP
-# ============================================================================
+Show-Logo
 
 while ($true) {
-    Clear-Host
-    Show-Logo
-    
-    $choice = Read-Host "  Enter choice"
+    Write-Host ""
+    Write-Host "Select scan mode:" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "  [1] Scan javaw.exe memory" -ForegroundColor White
+    Write-Host "  [2] Check java.exe JAR files" -ForegroundColor White
+    Write-Host "  [3] Scan mods folder" -ForegroundColor White
+    Write-Host "  [4] Check suspicious DLL" -ForegroundColor White
+    Write-Host "  [5] SafeMode Detection" -ForegroundColor White
+    Write-Host "  [6] Browser History Scanner" -ForegroundColor White
+    Write-Host ""
+    Write-Host "  [0] Exit" -ForegroundColor DarkGray
+    Write-Host ""
 
-# ============================================================================
-# SECTION 1: BROWSER HISTORY SCANNER
-# ============================================================================
+    $choice = Read-Host "Enter choice"
 
 if ($choice -eq "1") {
     Clear-Host
     Show-Logo
     
-    Write-Host "  =========================================" -ForegroundColor Gray
-    Write-Host "  |                    BROWSER HISTORY SCANNER                              |" -ForegroundColor Gray
-    Write-Host "  =========================================" -ForegroundColor Gray
+    $totalFound = 0
+    
+    Write-Host ""
+    Write-Host "  =============================================================================" -ForegroundColor Gray
+    Write-Host "  |                         MEMORY SCANNER                                    |" -ForegroundColor Gray
+    Write-Host "  =============================================================================" -ForegroundColor Gray
     Write-Host ""
     
-    # Список подозрительных сайтов
-    $suspiciousSites = @(
-        'deltadlc.xyz',
-        'wexside.ru',
-        'exploitclient.com',
-        'systemdlc.com',
-        'cortexclient.com',
-        'mhub.fun',
-        'wildclient.org',
-        'nightclient.xyz',
-        'nursultan.fun',
-        'doomsdayclient.com',
-        'fearclient.tilda.ws',
-        'liminarclient.fun'
-    )
-    
-    # Прогресс бар
+    # Красивая анимация загрузки
     $barLength = 50
-    Write-Host "  Scanning browsers... " -NoNewline -ForegroundColor Gray
+    Write-Host "  Initializing... " -NoNewline -ForegroundColor Gray
     for ($i = 0; $i -le $barLength; $i++) {
         $percent = [math]::Round(($i / $barLength) * 100)
         $bar = "#" * $i + "." * ($barLength - $i)
-        Write-Host "`r  Scanning browsers... [$bar] $percent%" -NoNewline -ForegroundColor Gray
-        Start-Sleep -Milliseconds 20
+        Write-Host "`r  Initializing... [$bar] $percent%" -NoNewline -ForegroundColor Gray
+        Start-Sleep -Milliseconds 30
     }
     # Очищаем строку загрузки
     Write-Host "`r$(' ' * 80)" -NoNewline
     Write-Host "`r" -NoNewline
     Write-Host ""
-    Write-Host ""
-    
-    $foundUrls = @{}
-    $totalFound = 0
-    
-    # Функция для поиска URL в истории (скрытно)
-    function Search-BrowserHistory {
-        param($historyPath, $browserName)
-        
-        if (-not (Test-Path $historyPath)) {
-            return
-        }
-        
-        try {
-            # Копируем файл истории (т.к. браузер может его блокировать)
-            $tempHistory = "$env:TEMP\browser_history_temp.db"
-            Copy-Item -Path $historyPath -Destination $tempHistory -Force -ErrorAction SilentlyContinue
-            
-            # Читаем SQLite базу данных истории
-            Add-Type -AssemblyName System.Data
-            $connection = New-Object System.Data.SQLite.SQLiteConnection("Data Source=$tempHistory;Version=3;")
-            $connection.Open()
-            
-            $command = $connection.CreateCommand()
-            $command.CommandText = "SELECT url, visit_count FROM urls"
-            
-            $reader = $command.ExecuteReader()
-            
-            while ($reader.Read()) {
-                $url = $reader["url"]
-                $visitCount = $reader["visit_count"]
-                
-                foreach ($site in $suspiciousSites) {
-                    if ($url -match $site) {
-                        if ($foundUrls.ContainsKey($url)) {
-                            $foundUrls[$url].Count += $visitCount
-                            if (-not ($foundUrls[$url].Browsers -contains $browserName)) {
-                                $foundUrls[$url].Browsers += @($browserName)
-                            }
-                        } else {
-                            $foundUrls[$url] = @{
-                                Count = $visitCount
-                                Browsers = @($browserName)
-                            }
-                        }
-                        $totalFound++
-                        break
-                    }
-                }
-            }
-            
-            $reader.Close()
-            $connection.Close()
-            Remove-Item -Path $tempHistory -Force -ErrorAction SilentlyContinue
-            
-        } catch {
-            # Если SQLite не работает, используем простой текстовый поиск
-            try {
-                $content = Get-Content -Path $historyPath -Raw -ErrorAction SilentlyContinue
-                
-                foreach ($site in $suspiciousSites) {
-                    $matches = [regex]::Matches($content, [regex]::Escape($site))
-                    if ($matches.Count -gt 0) {
-                        $url = "https://$site/"
-                        if ($foundUrls.ContainsKey($url)) {
-                            $foundUrls[$url].Count += $matches.Count
-                            if (-not ($foundUrls[$url].Browsers -contains $browserName)) {
-                                $foundUrls[$url].Browsers += @($browserName)
-                            }
-                        } else {
-                            $foundUrls[$url] = @{
-                                Count = $matches.Count
-                                Browsers = @($browserName)
-                            }
-                        }
-                        $totalFound += $matches.Count
-                    }
-                }
-            } catch { }
-        }
-    }
-    
-    # Пути к истории браузеров
-    $chromeHistory = "$env:LOCALAPPDATA\Google\Chrome\User Data\Default\History"
-    $edgeHistory = "$env:LOCALAPPDATA\Microsoft\Edge\User Data\Default\History"
-    $operaHistory = "$env:APPDATA\Opera Software\Opera Stable\History"
-    $operaGXHistory = "$env:APPDATA\Opera Software\Opera GX Stable\History"
-    $yandexHistory = "$env:LOCALAPPDATA\Yandex\YandexBrowser\User Data\Default\History"
-    $braveHistory = "$env:LOCALAPPDATA\BraveSoftware\Brave-Browser\User Data\Default\History"
-    $vivaldiHistory = "$env:LOCALAPPDATA\Vivaldi\User Data\Default\History"
-    $torHistory = "$env:APPDATA\Tor Browser\Browser\TorBrowser\Data\Browser\profile.default\places.sqlite"
-    $firefoxProfile = "$env:APPDATA\Mozilla\Firefox\Profiles"
-    
-    # Сканируем Chrome
-    Search-BrowserHistory -historyPath $chromeHistory -browserName "Google Chrome"
-    
-    # Сканируем Edge
-    Search-BrowserHistory -historyPath $edgeHistory -browserName "Microsoft Edge"
-    
-    # Сканируем Opera
-    Search-BrowserHistory -historyPath $operaHistory -browserName "Opera"
-    
-    # Сканируем Opera GX
-    Search-BrowserHistory -historyPath $operaGXHistory -browserName "Opera GX"
-    
-    # Сканируем Yandex
-    Search-BrowserHistory -historyPath $yandexHistory -browserName "Yandex Browser"
-    
-    # Сканируем Brave
-    Search-BrowserHistory -historyPath $braveHistory -browserName "Brave"
-    
-    # Сканируем Vivaldi
-    Search-BrowserHistory -historyPath $vivaldiHistory -browserName "Vivaldi"
-    
-    # Сканируем Tor Browser
-    if (Test-Path $torHistory) {
-        try {
-            $tempHistory = "$env:TEMP\tor_history_temp.db"
-            Copy-Item -Path $torHistory -Destination $tempHistory -Force -ErrorAction SilentlyContinue
-            
-            $content = Get-Content -Path $tempHistory -Raw -ErrorAction SilentlyContinue
-            
-            foreach ($site in $suspiciousSites) {
-                $matches = [regex]::Matches($content, [regex]::Escape($site))
-                if ($matches.Count -gt 0) {
-                    $url = "https://$site/"
-                    if ($foundUrls.ContainsKey($url)) {
-                        $foundUrls[$url].Count += $matches.Count
-                        if (-not ($foundUrls[$url].Browsers -contains "Tor Browser")) {
-                            $foundUrls[$url].Browsers += @("Tor Browser")
-                        }
-                    } else {
-                        $foundUrls[$url] = @{
-                            Count = $matches.Count
-                            Browsers = @("Tor Browser")
-                        }
-                    }
-                    $totalFound += $matches.Count
-                }
-            }
-            
-            Remove-Item -Path $tempHistory -Force -ErrorAction SilentlyContinue
-        } catch { }
-    }
-    
-    # Сканируем Firefox (имеет несколько профилей)
-    if (Test-Path $firefoxProfile) {
-        $profiles = Get-ChildItem -Path $firefoxProfile -Directory -ErrorAction SilentlyContinue
-        foreach ($profile in $profiles) {
-            $firefoxHistory = Join-Path $profile.FullName "places.sqlite"
-            if (Test-Path $firefoxHistory) {
-                try {
-                    $tempHistory = "$env:TEMP\firefox_history_temp.db"
-                    Copy-Item -Path $firefoxHistory -Destination $tempHistory -Force -ErrorAction SilentlyContinue
-                    
-                    $content = Get-Content -Path $tempHistory -Raw -ErrorAction SilentlyContinue
-                    
-                    foreach ($site in $suspiciousSites) {
-                        $matches = [regex]::Matches($content, [regex]::Escape($site))
-                        if ($matches.Count -gt 0) {
-                            $url = "https://$site/"
-                            if ($foundUrls.ContainsKey($url)) {
-                                $foundUrls[$url].Count += $matches.Count
-                                if (-not ($foundUrls[$url].Browsers -contains "Firefox")) {
-                                    $foundUrls[$url].Browsers += @("Firefox")
-                                }
-                            } else {
-                                $foundUrls[$url] = @{
-                                    Count = $matches.Count
-                                    Browsers = @("Firefox")
-                                }
-                            }
-                            $totalFound += $matches.Count
-                        }
-                    }
-                    
-                    Remove-Item -Path $tempHistory -Force -ErrorAction SilentlyContinue
-                } catch { }
-            }
-        }
-    }
+    Start-Sleep -Milliseconds 200
     
     Write-Host ""
-    
-    # Показываем результаты
-    if ($foundUrls.Count -gt 0) {
-        Write-Host "  =========================================" -ForegroundColor Red
-        Write-Host "  |                     🚨 SUSPICIOUS SITES DETECTED! 🚨                   |" -ForegroundColor Red
-        Write-Host "  =========================================" -ForegroundColor Red
-        Write-Host ""
-        
-        $sortedUrls = $foundUrls.GetEnumerator() | Sort-Object -Property {$_.Value.Count} -Descending
-        
-        foreach ($entry in $sortedUrls) {
-            Write-Host "    • $($entry.Key)" -ForegroundColor White -NoNewline
-            Write-Host " - $($entry.Value.Count) visit(s)" -ForegroundColor Red
-            Write-Host "      Browser(s): $($entry.Value.Browsers -join ', ')" -ForegroundColor Gray
-        }
-        
-        Write-Host ""
-        
-    } else {
-        Write-Host "  [✓] NO SUSPICIOUS ACTIVITY DETECTED" -ForegroundColor Green
-        Write-Host ""
-        Write-Host "    No visits or accounts found for known cheat websites." -ForegroundColor Gray
-        Write-Host ""
-    }
-    
-    # Статистика
-    Write-Host "  ─────────────────────────────────────────────────────────────────────────" -ForegroundColor Gray
-    Write-Host "  📊 Statistics:" -ForegroundColor Gray
-    Write-Host "     Browsers scanned:          9 (Chrome, Edge, Opera, Opera GX, Yandex, Brave, Vivaldi, Tor, Firefox)" -ForegroundColor White
-    Write-Host "     Suspicious sites visited:  $($foundUrls.Count)" -ForegroundColor $(if($foundUrls.Count -gt 0){'Red'}else{'Green'})
-    Write-Host "     Total visits:              $totalFound" -ForegroundColor $(if($totalFound -gt 0){'Red'}else{'Green'})
-    Write-Host "  ─────────────────────────────────────────────────────────────────────────" -ForegroundColor Gray
-    Write-Host ""
-    
-    Read-Host "Press Enter to return to menu"
-    Clear-Host
-    Show-Logo
-    
-
-} elseif ($choice -eq "2") {
-    Clear-Host
-    Show-Logo
-    
-    Write-Host ""
-    Write-Host "  =========================================================================" -ForegroundColor Green
-    Write-Host "                         MODS ANALYZER                                   " -ForegroundColor Green
-    Write-Host "  =========================================================================" -ForegroundColor Green
-    Write-Host ""
-    
-    Write-Host "  [~] Searching for Minecraft installations..." -ForegroundColor Cyan
-    Write-Host ""
-    
-    $modsFolders = @()
-    $activeModsPath = $null
+    Write-Host "  [~] Scanning javaw.exe processes..." -ForegroundColor Gray
     
     $javawProcesses = Get-Process -Name javaw -ErrorAction SilentlyContinue
     
     if ($javawProcesses) {
+        Write-Host "    Found $($javawProcesses.Count) javaw.exe process(es)" -ForegroundColor Gray
+        Write-Host ""
+        
+        Add-Type @'
+using System;
+using System.Runtime.InteropServices;
+using System.Text;
+
+public class MemScanner {
+    [DllImport("kernel32.dll")]
+    public static extern IntPtr OpenProcess(uint dwDesiredAccess, bool bInheritHandle, int dwProcessId);
+    
+    [DllImport("kernel32.dll")]
+    public static extern bool ReadProcessMemory(IntPtr hProcess, IntPtr lpBaseAddress, byte[] lpBuffer, uint dwSize, out uint lpNumberOfBytesRead);
+    
+    [DllImport("kernel32.dll")]
+    public static extern bool CloseHandle(IntPtr hObject);
+    
+    [DllImport("kernel32.dll")]
+    public static extern int VirtualQueryEx(IntPtr hProcess, IntPtr lpAddress, out MEMORY_BASIC_INFORMATION lpBuffer, uint dwLength);
+    
+    [StructLayout(LayoutKind.Sequential)]
+    public struct MEMORY_BASIC_INFORMATION {
+        public IntPtr BaseAddress;
+        public IntPtr AllocationBase;
+        public uint AllocationProtect;
+        public IntPtr RegionSize;
+        public uint State;
+        public uint Protect;
+        public uint Type;
+    }
+    
+    public static string Scan(int pid) {
+        IntPtr hProcess = OpenProcess(0x1F0FFF, false, pid);
+        if (hProcess == IntPtr.Zero) return "ERROR:OpenProcess";
+        
+        string[] sigs = new string[] {
+            "bZGqnxkxvcKXYkV]S]",
+            "sXNEdnSpUdmg[I[]RKq",
+            "HXEDpHbpRJCyiNK\\P",
+            "Liminar-free-1.0.0",
+            "doomsdayloader",
+            "DoomsdayLoader",
+            "doom.client",
+            "doomsdayclient",
+            "LiminarClient",
+            "LiminarLoader",
+            "LiminarGhost",
+            "Killaura",
+            "KillAura",
+            "TriggerBot",
+            "Triggerbot",
+            "Xray",
+            "XRay",
+            "X-Ray"
+        };
+        
+        try {
+            IntPtr addr = IntPtr.Zero;
+            MEMORY_BASIC_INFORMATION mbi;
+            int regions = 0;
+            
+            while (VirtualQueryEx(hProcess, addr, out mbi, (uint)Marshal.SizeOf(typeof(MEMORY_BASIC_INFORMATION))) != 0) {
+                if (mbi.State == 0x1000) {
+                    long size = mbi.RegionSize.ToInt64();
+                    if (size > 0 && size < 50000000) {
+                        byte[] buffer = new byte[size];
+                        uint bytesRead;
+                        
+                        if (ReadProcessMemory(hProcess, mbi.BaseAddress, buffer, (uint)size, out bytesRead)) {
+                            regions++;
+                            string content = Encoding.ASCII.GetString(buffer, 0, (int)bytesRead);
+                            
+                            foreach (string sig in sigs) {
+                                if (content.Contains(sig)) {
+                                    CloseHandle(hProcess);
+                                    return "FOUND:" + sig;
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                long next = mbi.BaseAddress.ToInt64() + mbi.RegionSize.ToInt64();
+                if (next <= mbi.BaseAddress.ToInt64() || next > 0x7FFFFFFFFFFF) break;
+                addr = new IntPtr(next);
+            }
+            
+            CloseHandle(hProcess);
+            return "CLEAN:Scanned_" + regions + "_regions";
+        } catch (Exception ex) {
+            CloseHandle(hProcess);
+            return "ERROR:" + ex.Message;
+        }
+    }
+}
+'@ -ErrorAction SilentlyContinue
+        
         foreach ($proc in $javawProcesses) {
+            # Получаем информацию о процессе
+            $procInfo = Get-Process -Id $proc.Id -ErrorAction SilentlyContinue
+            $memoryMB = [math]::Round($proc.WorkingSet64 / 1MB, 2)
+            $memoryGB = [math]::Round($proc.WorkingSet64 / 1GB, 2)
+            $startTime = $proc.StartTime.ToString("HH:mm:ss")
+            
+            # Пропускаем javaw с памятью < 1 GB
+            if ($memoryGB -lt 1) {
+                continue
+            }
+            
+            Write-Host "  ┌-----------------------------------------------------------------" -ForegroundColor DarkGray
+            Write-Host "  │ [PID $($proc.Id)] javaw.exe | $memoryMB MB | Started: $startTime" -ForegroundColor White
+            Write-Host "  └-----------------------------------------------------------------" -ForegroundColor DarkGray
+            
+            # Анимация сканирования
+            $spinnerFrames = @("|", "/", "-", "\")
+            Write-Host "    [" -NoNewline -ForegroundColor Gray
+            for ($i = 0; $i -lt 8; $i++) {
+                Write-Host "$($spinnerFrames[$i % 4])" -NoNewline -ForegroundColor Gray
+                Start-Sleep -Milliseconds 100
+                Write-Host "`b" -NoNewline
+            }
+            Write-Host "√] Scanning..." -ForegroundColor Gray
+            
             try {
-                $memoryGB = [math]::Round($proc.WorkingSet64 / 1GB, 2)
-                if ($memoryGB -lt 1) { continue }
+                $result = [MemScanner]::Scan($proc.Id)
                 
-                $cmdLine = (Get-WmiObject Win32_Process -Filter "ProcessId = $($proc.Id)").CommandLine
+                Write-Host "`r                                        `r" -NoNewline
                 
-                if ($cmdLine -match '--gameDir\s+([^\s]+)') {
-                    $gameDir = $matches[1].Trim('"')
-                    $modsPath = Join-Path $gameDir "mods"
-                    if (Test-Path $modsPath) {
-                        $activeModsPath = $modsPath
-                        break
+                if ($result -like "FOUND:*") {
+                    $sig = $result.Replace("FOUND:", "")
+                    Write-Host "    [!] DETECTED: $sig" -ForegroundColor Red
+                    $totalFound++
+                }
+                elseif ($result -like "CLEAN:*") {
+                    Write-Host "    [√] Clean - No threats detected" -ForegroundColor DarkGray
+                }
+                elseif ($result -like "ERROR:*") {
+                    $err = $result.Replace("ERROR:", "")
+                    Write-Host "    [?] $err" -ForegroundColor Yellow
+                }
+            } catch {
+                Write-Host "    [?] Scan failed" -ForegroundColor Yellow
+            }
+            Write-Host ""
+        }
+        
+    } else {
+        Write-Host "    No javaw.exe processes running" -ForegroundColor Gray
+    }
+    
+    # Проверка на SafeMode - двухуровневая детекция
+    Write-Host ""
+    
+    Write-Host ""
+    if ($totalFound -eq 0) {
+        Write-Host "[+] Scan complete! Nothing detected." -ForegroundColor Green
+    } else {
+        Write-Host "[!] Scan complete! Found $totalFound issue(s)." -ForegroundColor Red
+    }
+    Write-Host ""
+    Read-Host "Press Enter to return to menu"
+    Clear-Host
+    Show-Logo
+    
+} elseif ($choice -eq "2") {
+    Clear-Host
+    Show-Logo
+    Write-Host "                   JAR File Checker Mode" -ForegroundColor Gray
+    Write-Host ""
+    
+    $totalFound = 0
+    
+    Write-Host "[~] Checking running java.exe processes..." -ForegroundColor Gray
+    
+    $javaProcesses = Get-Process -Name java -ErrorAction SilentlyContinue
+    $jarFiles = @()
+    
+    if ($javaProcesses) {
+        Write-Host "    Found $($javaProcesses.Count) java.exe process(es)" -ForegroundColor Gray
+        
+        foreach ($proc in $javaProcesses) {
+            try {
+                $commandLine = (Get-CimInstance Win32_Process -Filter "ProcessId = $($proc.Id)").CommandLine
+                
+                if ($commandLine -match '\.jar') {
+                    if ($commandLine -match '([A-Za-z]:[^\s]+\.jar)') {
+                        $jarPath = $matches[1] -replace '"', ''
+                        if (-not ($jarFiles -contains $jarPath)) {
+                            $jarFiles += $jarPath
+                        }
                     }
                 }
             } catch { }
         }
-    }
-    
-    $searchPaths = @(
-        "$env:APPDATA\.minecraft\mods",
-        "$env:APPDATA\.tlauncher\legacy\Minecraft\game\mods",
-        "$env:APPDATA\PrismLauncher\instances",
-        "C:\PulseVisuals\game\usermods"
-    )
-    
-    foreach ($path in $searchPaths) {
-        if (Test-Path $path) {
-            if ($path -like "*PrismLauncher*") {
-                $instances = Get-ChildItem $path -Directory -ErrorAction SilentlyContinue
-                foreach ($instance in $instances) {
-                    $instanceMods = Join-Path $instance.FullName ".minecraft\mods"
-                    if (Test-Path $instanceMods) {
-                        $mods = Get-ChildItem $instanceMods -Filter "*.jar" -ErrorAction SilentlyContinue
-                        if ($mods.Count -gt 0) {
-                            $modsFolders += $instanceMods
-                        }
-                    }
-                }
-            } else {
-                $jars = Get-ChildItem $path -Filter "*.jar" -ErrorAction SilentlyContinue
-                if ($jars.Count -gt 0) {
-                    $modsFolders += $path
-                }
-            }
-        }
-    }
-    
-    # PulseVisuals Р С•Р В±РЎР‚Р В°Р В±Р С•РЎвЂљР С”Р В° (РЎвЂљР С•Р В»РЎРЉР С”Р С• 1.21+)
-    if (Test-Path "C:\PulseVisuals\game\usermods") {
-        $versionFolders = Get-ChildItem "C:\PulseVisuals\game\usermods" -Directory -ErrorAction SilentlyContinue
-        foreach ($versionFolder in $versionFolders) {
-            if ($versionFolder.Name -ne '1.16.5') {
-                $jars = Get-ChildItem $versionFolder.FullName -Filter "*.jar" -ErrorAction SilentlyContinue
-                if ($jars.Count -gt 0) {
-                    $modsFolders += $versionFolder.FullName
-                }
-            }
-        }
-    }
-    
-    if ($activeModsPath -and -not ($modsFolders -contains $activeModsPath)) {
-        $modsFolders = @($activeModsPath) + $modsFolders
-    }
-    
-    if ($modsFolders.Count -eq 0) {
-        Write-Host "  [!] No mods folders found!" -ForegroundColor Gray
-        Write-Host ""
-        Read-Host "  Press Enter to return to menu"
     } else {
-        if ($activeModsPath) {
-            Write-Host "  [!] Active Minecraft detected!" -ForegroundColor Green
-            Write-Host ""
-        }
+        Write-Host "    No running java.exe processes" -ForegroundColor Gray
+    }
+    
+    Write-Host ""
+    Write-Host "[~] Checking recent java.exe executions..." -ForegroundColor Gray
+    
+    # Get recent java.exe from Windows Event Log
+    try {
+        $recentJava = Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-Shell-Core/Operational'; ID=9707} -MaxEvents 100 -ErrorAction SilentlyContinue | 
+            Where-Object { $_.Message -match 'java\.exe' -and $_.Message -match '\.jar' }
         
-        Write-Host "  Found $($modsFolders.Count) mods folder(s):" -ForegroundColor Green
-        Write-Host ""
-        
-        for ($i = 0; $i -lt $modsFolders.Count; $i++) {
-            $prefix = "  [$($i+1)] "
+        if ($recentJava) {
+            Write-Host "    Found recent java.exe executions in Event Log" -ForegroundColor Gray
             
-            if ($activeModsPath -and $modsFolders[$i] -eq $activeModsPath) {
-                Write-Host $prefix -ForegroundColor Cyan -NoNewline
-                Write-Host "[ACTIVE] " -ForegroundColor Green -NoNewline
-                Write-Host $modsFolders[$i] -ForegroundColor White
-            } else {
-                Write-Host $prefix -ForegroundColor White -NoNewline
-                Write-Host $modsFolders[$i] -ForegroundColor Gray
-            }
-        }
-        
-        Write-Host ""
-        Write-Host "  [0] Custom folder" -ForegroundColor Yellow
-        Write-Host ""
-        
-        $folderChoice = Read-Host "  Select folder"
-        
-        if ([string]::IsNullOrWhiteSpace($folderChoice)) {
-            continue
-        }
-        
-        $selectedFolder = $null
-        
-        if ($folderChoice -eq "0") {
-            $customPath = Read-Host "  Enter custom mods folder path"
-            
-            if ([string]::IsNullOrWhiteSpace($customPath)) {
-                continue
-            }
-            
-            if (Test-Path $customPath) {
-                $testJars = Get-ChildItem -Path $customPath -Filter "*.jar" -ErrorAction SilentlyContinue
-                
-                if ($testJars.Count -gt 0) {
-                    $selectedFolder = $customPath
-                    Write-Host ""
-                    Write-Host "  [OK] Found $($testJars.Count) JAR file(s)" -ForegroundColor Green
-                    Write-Host ""
-                } else {
-                    Write-Host ""
-                    Write-Host "  [!] No JAR files found!" -ForegroundColor Red
-                    Write-Host ""
-                    Read-Host "  Press Enter to return"
-                    continue
+            foreach ($event in $recentJava) {
+                if ($event.Message -match '([A-Z]:\\[^\\x00\r\n]+\.jar)') {
+                    $jarPath = $matches[1]
+                    if ((Test-Path $jarPath) -and (-not ($jarFiles -contains $jarPath))) {
+                        $jarFiles += $jarPath
+                    }
                 }
-            } else {
-                Write-Host ""
-                Write-Host "  [!] Path not found!" -ForegroundColor Red
-                Write-Host ""
-                Read-Host "  Press Enter to return"
-                continue
             }
         }
-        elseif ($folderChoice -match '^\d+$' -and [int]$folderChoice -gt 0 -and [int]$folderChoice -le $modsFolders.Count) {
-            $selectedFolder = $modsFolders[[int]$folderChoice - 1]
-        }
-        else {
-            continue
-        }
-        
-        if ($selectedFolder) {
-            Write-Host ""
-            Write-Host "  [~] Scanning: $selectedFolder" -ForegroundColor Cyan
-            Write-Host ""
+    } catch { }
+    
+    # Check Prefetch directory
+    Write-Host ""
+    Write-Host "[~] Checking Prefetch files..." -ForegroundColor Gray
+    
+    
+    $prefetchPath = "C:\Windows\Prefetch"
+    if (Test-Path $prefetchPath) {
+        try {
+            $javaPrefetch = Get-ChildItem -Path $prefetchPath -Filter "JAVA*.pf" -ErrorAction SilentlyContinue | 
+                Sort-Object LastWriteTime -Descending | Select-Object -First 5
             
-            $jarFiles = Get-ChildItem -Path $selectedFolder -Filter "*.jar" -ErrorAction SilentlyContinue
-            
-            if ($jarFiles.Count -eq 0) {
-                Write-Host "  [!] No JAR files found" -ForegroundColor Gray
-            } else {
-                Write-Host "  Found $($jarFiles.Count) JAR file(s)" -ForegroundColor Gray
-                Write-Host ""
-                Write-Host "  [*] Starting deep analysis..." -ForegroundColor Cyan
-                Write-Host ""
-                Write-Host "  Checking for:" -ForegroundColor Gray
-                Write-Host "    - Known cheat clients (Liminar, Doomsday, etc.)" -ForegroundColor DarkGray
-                Write-Host "    - Cheat modules (AutoCrystal, Killaura, etc.)" -ForegroundColor DarkGray
-                Write-Host "    - Forbidden mods (XRay, Minimap, Baritone, etc.)" -ForegroundColor DarkGray
-                Write-Host "    - Obfuscated files and suspicious patterns" -ForegroundColor DarkGray
-                Write-Host "    - Small file sizes (< 10KB)" -ForegroundColor DarkGray
-                Write-Host ""
+            if ($javaPrefetch) {
+                Write-Host "    Found $($javaPrefetch.Count) java Prefetch file(s)" -ForegroundColor Gray
                 
-                Add-Type -Assembly System.IO.Compression.FileSystem
-                
-                $cheatStrings = @(
-                    'AutoCrystal','AutoAnchor','AutoTotem','AimAssist','TriggerBot',
-                    'Killaura','KillAura','AutoClicker','AutoPot','ShieldBreaker','FakeLag',
-                    'AutoDoubleHand','MaceSwap','AutoWeb','LiminarClient','Liminar',
-                    'BlockESP','ElytraSwap','NoSlow','WallHack','ChestStealer',
-                    'ReplayMod','FlashBack','XRay','Minimap','Voxelmap','JourneyMap',
-                    'Baritone','Schematica','Litematica','FreeCam','Freecam','WorldEdit',
-                    'Pojav','FCL','MobileEmulator','Hitbox','HitBox','Reach','AntiKnockback',
-                    'Velocity','Speed','Fly','Flight','NoFall','ESP','Tracers','Aimbot'
-                )
-                
-                $suspiciousMods = @()
-                $processedCount = 0
-                
-                Write-Host "  Scanning..." -ForegroundColor Gray
-                
-                foreach ($jar in $jarFiles) {
-                    $processedCount++
-                    $isSuspicious = $false
-                    $reason = ""
-                    $cheatClassesFound = @()
-                    
-                    foreach ($cheatString in $cheatStrings) {
-                        if ($jar.Name -match $cheatString) {
-                            $isSuspicious = $true
-                            $reason = "Cheat pattern in filename"
-                            break
-                        }
-                    }
-                    
-                    if ($jar.Length -lt 10KB) {
-                        $isSuspicious = $true
-                        $reason = "Very small size"
-                    }
-                    
-                    if ($jar.BaseName -match '^[a-z]{1,3}$') {
-                        $isSuspicious = $true
-                        $reason = "Obfuscated filename"
-                    }
-                    
+                foreach ($pf in $javaPrefetch) {
                     try {
-                        $zip = [System.IO.Compression.ZipFile]::OpenRead($jar.FullName)
+                        $content = [System.IO.File]::ReadAllBytes($pf.FullName)
+                        $textUnicode = [System.Text.Encoding]::Unicode.GetString($content)
+                        $textAscii = [System.Text.Encoding]::ASCII.GetString($content)
                         
-                        foreach ($entry in $zip.Entries) {
-                            if ($entry.FullName -match '\.class$') {
-                                foreach ($cheatString in $cheatStrings) {
-                                    if ($entry.FullName -match $cheatString) {
-                                        if (-not ($cheatClassesFound -contains $cheatString)) {
-                                            $cheatClassesFound += $cheatString
-                                        }
-                                        if (-not $isSuspicious) {
-                                            $isSuspicious = $true
-                                            $reason = "Cheat classes detected"
-                                        }
-                                    }
+                        # Try to find .jar paths
+                        $allMatches = [regex]::Matches($textUnicode + $textAscii, '([A-Z]:\\[^\x00]+?\.jar)')
+                        
+                        foreach ($match in $allMatches) {
+                            $jarPath = $match.Groups[1].Value -replace '[^\x20-\x7E]', ''
+                            $jarPath = $jarPath.Trim()
+                            
+                            if ($jarPath -match '^[A-Z]:\\' -and $jarPath.EndsWith('.jar')) {
+                                if ((Test-Path $jarPath) -and (-not ($jarFiles -contains $jarPath))) {
+                                    Write-Host "      Found: $jarPath" -ForegroundColor Gray
+                                    $jarFiles += $jarPath
                                 }
                             }
                         }
-                        
-                        $zip.Dispose()
                     } catch { }
-                    
-                    if ($isSuspicious) {
-                        $suspiciousMods += @{
-                            Name = $jar.Name
-                            Size = $jar.Length
-                            Reason = $reason
-                            CheatClasses = $cheatClassesFound
-                        }
-                    }
                 }
-                
-                Write-Host ""
-                
-                Write-Host "  =======================================================================" -ForegroundColor Gray
-                Write-Host ""
-                
-                if ($suspiciousMods.Count -gt 0) {
-                    Write-Host "  [!] SUSPICIOUS MODS DETECTED: $($suspiciousMods.Count)" -ForegroundColor Red
-                    Write-Host ""
-                    
-                    foreach ($mod in $suspiciousMods) {
-                        Write-Host "  -> $($mod.Name)" -ForegroundColor Red
-                        Write-Host "     $($mod.Reason)" -ForegroundColor Yellow
-                        if ($mod.CheatClasses.Count -gt 0) {
-                            Write-Host "     Cheat classes: $($mod.CheatClasses -join ', ')" -ForegroundColor DarkRed
-                        }
-                        Write-Host ""
-                    }
-                } else {
-                    Write-Host "  [OK] All mods appear legitimate" -ForegroundColor Green
-                    Write-Host "    Total mods scanned: $($jarFiles.Count)" -ForegroundColor Gray
-                }
-                
-                Write-Host ""
-                Write-Host "  =======================================================================" -ForegroundColor Gray
-                Write-Host ""
+            } else {
+                Write-Host "    No java Prefetch files found" -ForegroundColor Gray
             }
-            
-            Read-Host "  Press Enter to return to menu"
+        } catch {
+            Write-Host "    [!] Cannot access Prefetch (need admin)" -ForegroundColor Gray
         }
     }
+    
+    
+    Write-Host ""
+    Write-Host "[~] Searching recent JAR files in Downloads..." -ForegroundColor Gray
+    
+    $downloadsPath = Join-Path $env:USERPROFILE 'Downloads'
+    if (Test-Path $downloadsPath) {
+        $recentJars = Get-ChildItem -Path $downloadsPath -Filter "*.jar" -Recurse -ErrorAction SilentlyContinue | 
+            Where-Object { $_.LastWriteTime -gt (Get-Date).AddDays(-30) } | 
+            Sort-Object LastWriteTime -Descending | 
+            Select-Object -First 20
+        
+        if ($recentJars) {
+            Write-Host "    Found $($recentJars.Count) recent JAR file(s)" -ForegroundColor Gray
+            foreach ($jar in $recentJars) {
+                if (-not ($jarFiles -contains $jar.FullName)) {
+                    $jarFiles += $jar.FullName
+                }
+            }
+        }
+    }
+    
+    Write-Host ""
+    Write-Host "[~] Scanning JAR files..." -ForegroundColor Gray
+    
+    if ($jarFiles.Count -gt 0) {
+        Write-Host "    Found $($jarFiles.Count) JAR file(s) to check" -ForegroundColor Gray
+        Write-Host ""
+        
+        Add-Type -Assembly System.IO.Compression.FileSystem
+        
+        foreach ($jarPath in $jarFiles) {
+            Write-Host "    [*] Checking: $jarPath" -ForegroundColor Gray
+            
+            if (Test-Path $jarPath) {
+                try {
+                    $zip = [System.IO.Compression.ZipFile]::OpenRead($jarPath)
+                    
+                    $suspiciousClasses = @(
+                        'net/java/c.class',
+                        'net/java/l.class', 
+                        'net/java/s.class',
+                        'net/java/f.class'
+                    )
+                    
+                    $foundClasses = @()
+                    
+                    foreach ($entry in $zip.Entries) {
+                        foreach ($suspicious in $suspiciousClasses) {
+                            if ($entry.FullName -eq $suspicious) {
+                                $foundClasses += $suspicious
+                            }
+                        }
+                    }
+                    
+                    $zip.Dispose()
+                    
+                    if ($foundClasses.Count -gt 0) {
+                        Write-Host ""
+                        Write-Host "        [!!!] CHEAT DETECTED!" -ForegroundColor Red
+                        Write-Host "        Found suspicious classes:" -ForegroundColor Red
+                        foreach ($cls in $foundClasses) {
+                            Write-Host "          - $cls" -ForegroundColor White
+                        }
+                        Write-Host ""
+                        $totalFound++
+                    } else {
+                        Write-Host "        [+] Clean" -ForegroundColor Green
+                    }
+                    
+                } catch {
+                    Write-Host "        [!] Cannot read JAR: $($_.Exception.Message)" -ForegroundColor Gray
+                }
+            } else {
+                Write-Host "        [!] File not found" -ForegroundColor Gray
+            }
+        }
+    } else {
+        Write-Host "    No JAR files found" -ForegroundColor Gray
+    }
+    
+    Write-Host ""
+    if ($totalFound -eq 0) {
+        Write-Host "[+] Scan complete! No cheats detected." -ForegroundColor Green
+    } else {
+        Write-Host "[!] Scan complete! Found $totalFound suspicious JAR(s)." -ForegroundColor Red
+    }
+    Write-Host ""
+    Read-Host "Press Enter to return to menu"
+    Clear-Host
+    Show-Logo
+    
 
 # ============================================================================
 # EXIT
