@@ -663,12 +663,50 @@ if ($choice -eq "1") {
         }
         
         Write-Host ""
-        Write-Host "    [0] Back to menu" -ForegroundColor DarkGray
+        Write-Host "    [0] Custom folder" -ForegroundColor Yellow
         Write-Host ""
         
         $folderChoice = Read-Host "Select folder"
         
-        if ($folderChoice -match '^\d+$' -and [int]$folderChoice -gt 0 -and [int]$folderChoice -le $modsFolders.Count) {
+        # Если выбрана custom folder
+        if ($folderChoice -eq "0") {
+            Write-Host ""
+            Write-Host "    Enter mods folder path:" -ForegroundColor Yellow
+            $customPath = Read-Host "    Path"
+            
+            if ([string]::IsNullOrWhiteSpace($customPath)) {
+                Write-Host ""
+                Write-Host "    [!] Cancelled" -ForegroundColor Gray
+                Start-Sleep -Seconds 1
+                Clear-Host
+                Show-Logo
+                continue
+            }
+            
+            if (Test-Path $customPath) {
+                $testJars = Get-ChildItem -Path $customPath -Filter "*.jar" -ErrorAction SilentlyContinue
+                if ($testJars.Count -gt 0) {
+                    $selectedFolder = $customPath
+                    Write-Host ""
+                    Write-Host "    [OK] Found $($testJars.Count) JAR file(s)" -ForegroundColor Green
+                } else {
+                    Write-Host ""
+                    Write-Host "    [!] No JAR files found!" -ForegroundColor Red
+                    Start-Sleep -Seconds 2
+                    Clear-Host
+                    Show-Logo
+                    continue
+                }
+            } else {
+                Write-Host ""
+                Write-Host "    [!] Path not found!" -ForegroundColor Red
+                Start-Sleep -Seconds 2
+                Clear-Host
+                Show-Logo
+                continue
+            }
+        }
+        elseif ($folderChoice -match '^\d+$' -and [int]$folderChoice -gt 0 -and [int]$folderChoice -le $modsFolders.Count) {
             $selectedFolder = $modsFolders[[int]$folderChoice - 1]
             
             Write-Host ""
@@ -1247,9 +1285,6 @@ if ($choice -eq "1") {
             Clear-Host
             Show-Logo
             
-        } elseif ($folderChoice -eq "0") {
-            Clear-Host
-            Show-Logo
         } else {
             Write-Host ""
             Write-Host "    Invalid choice!" -ForegroundColor Red
