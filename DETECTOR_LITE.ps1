@@ -454,12 +454,13 @@ if ($choice -eq "1") {
                 
                 $cheatStrings = @(
                     'AutoCrystal','AutoAnchor','AutoTotem','AimAssist','TriggerBot',
-                    'Killaura','AutoClicker','AutoPot','ShieldBreaker','FakeLag',
-                    'AutoDoubleHand','MaceSwap','AutoWeb','LiminarClient',
+                    'Killaura','KillAura','AutoClicker','AutoPot','ShieldBreaker','FakeLag',
+                    'AutoDoubleHand','MaceSwap','AutoWeb','LiminarClient','Liminar',
                     'BlockESP','ElytraSwap','NoSlow','WallHack','ChestStealer',
                     'ReplayMod','FlashBack','XRay','Minimap','Voxelmap','JourneyMap',
-                    'Baritone','Schematica','Litematica','FreeCam','WorldEdit',
-                    'Pojav','FCL','MobileEmulator'
+                    'Baritone','Schematica','Litematica','FreeCam','Freecam','WorldEdit',
+                    'Pojav','FCL','MobileEmulator','Hitbox','HitBox','Reach','AntiKnockback',
+                    'Velocity','Speed','Fly','Flight','NoFall','ESP','Tracers','Aimbot'
                 )
                 
                 $suspiciousMods = @()
@@ -508,31 +509,40 @@ if ($choice -eq "1") {
                     }
                     
                     # Deep scan inside JAR
-                    Write-Host "    -> Scanning JAR contents..." -ForegroundColor DarkGray
+                    Write-Host "    -> Scanning JAR internal classes..." -ForegroundColor DarkGray
                     try {
                         $zip = [System.IO.Compression.ZipFile]::OpenRead($jar.FullName)
                         
                         $classCount = 0
+                        $foundCheatClasses = @()
+                        
                         foreach ($entry in $zip.Entries) {
                             if ($entry.FullName -match '\.class$') {
                                 $classCount++
-                            }
-                            
-                            # Check for cheat classes
-                            foreach ($cheatString in $cheatStrings) {
-                                if ($entry.FullName -match $cheatString) {
-                                    if (-not $isSuspicious) {
-                                        $isSuspicious = $true
-                                        $reason = "Cheat class found inside: $cheatString"
-                                        $detailsFound += "Class: $cheatString"
-                                        Write-Host "      [!] Found cheat class: $cheatString" -ForegroundColor Red
+                                
+                                # Check for cheat class names
+                                foreach ($cheatString in $cheatStrings) {
+                                    if ($entry.FullName -match $cheatString) {
+                                        $foundCheatClasses += "$cheatString in $($entry.FullName)"
+                                        if (-not $isSuspicious) {
+                                            $isSuspicious = $true
+                                            $reason = "Cheat classes found inside JAR"
+                                        }
                                     }
-                                    break
                                 }
                             }
                         }
                         
-                        Write-Host "      Classes found: $classCount" -ForegroundColor DarkGray
+                        Write-Host "      Total classes: $classCount" -ForegroundColor DarkGray
+                        
+                        if ($foundCheatClasses.Count -gt 0) {
+                            Write-Host "      [!] FOUND $($foundCheatClasses.Count) CHEAT CLASSES:" -ForegroundColor Red
+                            foreach ($cls in $foundCheatClasses) {
+                                Write-Host "        - $cls" -ForegroundColor Red
+                                $detailsFound += $cls
+                            }
+                        }
+                        
                         $zip.Dispose()
                     } catch {
                         Write-Host "      Could not scan JAR internals" -ForegroundColor DarkGray
