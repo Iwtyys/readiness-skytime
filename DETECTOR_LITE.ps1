@@ -1031,8 +1031,43 @@ if ($choice -eq "1") {
         }
         # Если выбран 0 - кастомная папка
         elseif ($folderChoice -eq "0") {
-            Clear-Host
-            Show-Logo
+            Write-Host ""
+            Write-Host "    Enter mods folder path (or press Enter to cancel):" -ForegroundColor Yellow
+            $customPath = Read-Host "    Path"
+            
+            if ([string]::IsNullOrWhiteSpace($customPath)) {
+                Write-Host ""
+                Write-Host "    [!] Cancelled. Returning to main menu..." -ForegroundColor Gray
+                Start-Sleep -Seconds 1
+                Clear-Host
+                Show-Logo
+                continue
+            }
+            
+            if (Test-Path $customPath) {
+                $testJars = Get-ChildItem -Path $customPath -Filter "*.jar" -ErrorAction SilentlyContinue
+                if ($testJars.Count -gt 0) {
+                    $selectedFolder = $customPath
+                    Write-Host ""
+                    Write-Host "    [OK] Found $($testJars.Count) JAR file(s)" -ForegroundColor Green
+                } else {
+                    Write-Host ""
+                    Write-Host "    [!] No JAR files found!" -ForegroundColor Red
+                    Write-Host ""
+                    Read-Host "    Press Enter to return"
+                    Clear-Host
+                    Show-Logo
+                    continue
+                }
+            } else {
+                Write-Host ""
+                Write-Host "    [!] Path not found!" -ForegroundColor Red
+                Write-Host ""
+                Read-Host "    Press Enter to return"
+                Clear-Host
+                Show-Logo
+                continue
+            }
         } else {
             Write-Host ""
             Write-Host "    Invalid choice!" -ForegroundColor Red
