@@ -1320,7 +1320,7 @@ if ($choice -eq "1") {
     Write-Host ""
     Write-Host "  Select tool to launch:" -ForegroundColor Gray
     Write-Host ""
-    Write-Host "  [1] Everything 1.5a   - Fast file search engine" -ForegroundColor White
+    Write-Host "  [1] Everything 1.5a   - Fast file search + content search" -ForegroundColor White
     Write-Host "  [2] JournalTrace      - USB/File activity tracker" -ForegroundColor White
     Write-Host "  [3] System Informer   - Advanced task manager" -ForegroundColor White
     Write-Host ""
@@ -1350,9 +1350,9 @@ if ($choice -eq "1") {
         } else {
             Write-Host "  [!] Not found, downloading portable version..." -ForegroundColor Yellow
             try {
-                # Скачиваем portable ZIP версию
-                $url = "https://www.voidtools.com/Everything-1.4.1.1024.x64.zip"
-                Write-Host "  [~] Downloading from voidtools.com..." -ForegroundColor Gray
+                # Скачиваем portable ZIP версию Everything 1.5a (поддержка content search)
+                $url = "https://www.voidtools.com/Everything-1.5.0.1424b.x64.zip"
+                Write-Host "  [~] Downloading Everything 1.5a from voidtools.com..." -ForegroundColor Gray
                 
                 $webClient = New-Object System.Net.WebClient
                 $webClient.DownloadFile($url, $everythingZip)
