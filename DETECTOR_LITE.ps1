@@ -1746,11 +1746,74 @@ Read-Host "Press Enter to continue"
             
             Set-Content -Path $tempScript -Value $scriptContent -Encoding UTF8
             
-            # Запускаем с правами администратора
+            # Создаём файл для результатов
+            $resultFile = Join-Path $env:TEMP "dns_scan_result.txt"
+            if (Test-Path $resultFile) {
+                Remove-Item $resultFile -Force -ErrorAction SilentlyContinue
+            }
+            
+            # Модифицируем скрипт - сохраняем результаты в файл
+            $scriptContent = $scriptContent -replace 'Read-Host "Press Enter to continue"', "`$results = @{foundCount=`$foundDomains.Count; records=`$suspiciousRecords; totalPatterns=`$cheatDomains.Count}; `$results | ConvertTo-Json -Depth 10 | Out-File -FilePath '$resultFile' -Encoding UTF8"
+            Set-Content -Path $tempScript -Value $scriptContent -Encoding UTF8
+            
+            # Запускаем СКРЫТНО с правами администратора
             try {
-                Start-Process powershell -ArgumentList "-ExecutionPolicy Bypass -NoProfile -File `"$tempScript`"" -Verb RunAs -Wait
+                $psi = New-Object System.Diagnostics.ProcessStartInfo
+                $psi.FileName = "powershell.exe"
+                $psi.Arguments = "-ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden -File `"$tempScript`""
+                $psi.Verb = "RunAs"
+                $psi.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Hidden
                 
-                # Удаляем временный файл
+                $process = [System.Diagnostics.Process]::Start($psi)
+                
+                Write-Host "  [~] Scanning in background..." -ForegroundColor Cyan
+                $process.WaitForExit()
+                
+                # Читаем результаты
+                if (Test-Path $resultFile) {
+                    $results = Get-Content $resultFile -Raw | ConvertFrom-Json
+                    
+                    Write-Host "  [✓] DNS cache analyzed" -ForegroundColor Green
+                    Write-Host ""
+                    
+                    if ($results.foundCount -gt 0) {
+                        Write-Host "  ┌─────────────────────────────────────────────────────────────────────┐" -ForegroundColor Red
+                        Write-Host "  │                    ⚠️  CHEAT DOMAINS DETECTED                       │" -ForegroundColor Red
+                        Write-Host "  └─────────────────────────────────────────────────────────────────────┘" -ForegroundColor Red
+                        Write-Host ""
+                        Write-Host "  Found $($results.foundCount) suspicious domain(s) in DNS cache:" -ForegroundColor Red
+                        Write-Host ""
+                        
+                        foreach ($record in $results.records) {
+                            Write-Host "  🚨 " -NoNewline -ForegroundColor Red
+                            Write-Host "$($record.Domain)" -ForegroundColor Yellow
+                            Write-Host "     └─ Pattern: $($record.CheatPattern)" -ForegroundColor DarkGray
+                        }
+                        
+                        Write-Host ""
+                        Write-Host "  ╔═══════════════════════════════════════════════════════════════════╗" -ForegroundColor Red
+                        Write-Host "  ║                      VERDICT: BAN                                  ║" -ForegroundColor Red  
+                        Write-Host "  ║  Player has accessed known cheat client domains                   ║" -ForegroundColor Red
+                        Write-Host "  ╚═══════════════════════════════════════════════════════════════════╝" -ForegroundColor Red
+                        
+                    } else {
+                        Write-Host "  ┌─────────────────────────────────────────────────────────────────────┐" -ForegroundColor Green
+                        Write-Host "  │                       ✓ DNS CACHE CLEAN                             │" -ForegroundColor Green
+                        Write-Host "  └─────────────────────────────────────────────────────────────────────┘" -ForegroundColor Green
+                        Write-Host ""
+                        Write-Host "  No known cheat domains found in DNS cache" -ForegroundColor Green
+                        Write-Host ""
+                        Write-Host "  Scanned $($results.totalPatterns) cheat patterns" -ForegroundColor DarkGray
+                    }
+                    
+                    # Удаляем результаты
+                    Remove-Item $resultFile -Force -ErrorAction SilentlyContinue
+                    
+                } else {
+                    Write-Host "  [✗] Failed to read scan results" -ForegroundColor Red
+                }
+                
+                # Удаляем временный скрипт
                 Remove-Item $tempScript -Force -ErrorAction SilentlyContinue
                 
             } catch {
@@ -1759,6 +1822,10 @@ Read-Host "Press Enter to continue"
                 Write-Host "  Please run the script as Administrator to use DNS Cache Scanner" -ForegroundColor Yellow
             }
             
+            Write-Host ""
+            Write-Host "  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
+            Write-Host ""
+            Read-Host "Press Enter to continue"
             Clear-Host
             Show-Logo
             continue
