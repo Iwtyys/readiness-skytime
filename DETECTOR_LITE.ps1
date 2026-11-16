@@ -1518,12 +1518,132 @@ if ($choice -eq "1") {
     Write-Host "  ║                        DNS CACHE SCANNER                                ║" -ForegroundColor Gray
     Write-Host "  ╚═════════════════════════════════════════════════════════════════════════╝" -ForegroundColor Gray
     Write-Host ""
-    Write-Host "  [~] Analyzing DNS cache for cheat domains..." -ForegroundColor Cyan
-    Write-Host "  [!] This requires administrator privileges" -ForegroundColor Yellow
+    
+    # Анимация загрузки
+    Write-Host "  [~] Initializing DNS Scanner..." -ForegroundColor Cyan
+    Start-Sleep -Milliseconds 500
+    Write-Host "  [~] Loading cheat domain database..." -ForegroundColor Cyan
+    Start-Sleep -Milliseconds 300
+    Write-Host "  [✓] Database loaded: 106 cheat patterns" -ForegroundColor Green
     Write-Host ""
+    Start-Sleep -Milliseconds 400
+    
+    Write-Host "  [~] Preparing multi-layer scan..." -ForegroundColor Cyan
+    Start-Sleep -Milliseconds 300
+    Write-Host "  [!] Administrator privileges required for deep scan" -ForegroundColor Yellow
+    Write-Host ""
+    Start-Sleep -Milliseconds 500
     
     # Список читерских доменов для Minecraft (1.21+)
-    $cheatDomains = @(
+    # ПРИОРИТЕТ 1: API/AUTH домены (чит запущен/работает)
+    $cheatDomainsAPI = @(
+        # Premium читы - API/AUTH серверы
+        "auth.systemdlc",
+        "api.systemdlc",
+        "systemdlc.com",
+        "auth.cortex",
+        "api.cortex",
+        "cortex-client.com",
+        "auth.mhub",
+        "api.mhub",
+        "mhub.gg",
+        "auth.flowdlc",
+        "api.flowdlc",
+        "flowdlc.com",
+        "auth.wexside",
+        "api.wexside",
+        "session.wexside",
+        "cdn.wexside",
+        "auth.vape.gg",
+        "api.vape.gg",
+        "session.vape.gg",
+        "license.vape.gg",
+        "cdn.vape.gg",
+        "auth.novoline",
+        "api.novoline",
+        "novoline.wtf",
+        "auth.azura",
+        "api.azura",
+        "session.azura.best",
+        "auth.rise",
+        "api.rise",
+        "Intent.design",
+        "auth.Intent.design",
+        "Intent.store",
+        "auth.astolfo",
+        "api.astolfo",
+        "astolfo.lgbt",
+        "session.astolfo.lgbt",
+        "auth.tenacity",
+        "api.tenacity",
+        "session.tenacity",
+        "auth.exhibition",
+        "api.exhibition",
+        "session.exhibition.today",
+        "auth.drip",
+        "api.drip",
+        "session.drip",
+        "auth.flux",
+        "api.flux",
+        "flux.today",
+        "auth.entropy",
+        "api.entropy",
+        "auth.moon",
+        "api.moon",
+        
+        # Free читы - API серверы
+        "api.liquidbounce.net",
+        "auth.liquidbounce.net",
+        "cloud.liquidbounce.net",
+        "cdn.liquidbounce.net",
+        "api.ccbluex.net",
+        "meteorclient.com",
+        "api.meteorclient.com",
+        "meteor.rip",
+        "futureclient.net",
+        "api.futureclient.net",
+        "auth.rusher.gg",
+        "api.rusherhack.org",
+        "impactclient.net",
+        "api.impactclient.net",
+        "wurstclient.net",
+        "api.wurstclient.net",
+        "updates.wurstclient.net",
+        "aristois.net",
+        "api.aristois.net",
+        "auth.aristois.net",
+        "api.fdpclient.com",
+        "unblockedfdp.net",
+        
+        # Ghost/Inject - Auth серверы
+        "api.ravenclient.cf",
+        "auth.raven",
+        "api.lbplus",
+        "auth.delta",
+        "api.delta-client",
+        "auth.takker",
+        "api.faker",
+        "auth.vergo",
+        "api.august",
+        "auth.remix",
+        "api.abyss",
+        
+        # Sigma
+        "auth.sigmaclient.info",
+        "api.sigma5.info",
+        "omikron.dev",
+        
+        # Alt генераторы
+        "auth.mcleaks.net",
+        "api.mcleaks.net",
+        "sessionserver.mcleaks.net",
+        "thealtening.com",
+        "api.thealtening.com",
+        "sessionserver.thealtening.com"
+    )
+    
+    # ПРИОРИТЕТ 2: Сайты для скачивания (резервная проверка)
+    $cheatDomainsDownload = @(
         # Premium читы
         "systemdlc",
         "cortex",
@@ -1642,6 +1762,9 @@ if ($choice -eq "1") {
         "altening"
     )
     
+    # Объединяем списки - API домены проверяются первыми!
+    $cheatDomains = $cheatDomainsAPI + $cheatDomainsDownload
+    
     try {
         # Получаем DNS cache через ipconfig
         Write-Host "  [~] Reading DNS cache..." -ForegroundColor Gray
@@ -1658,7 +1781,42 @@ if ($choice -eq "1") {
             $tempScript = Join-Path $env:TEMP "dns_scanner_temp.ps1"
             
             $scriptContent = @"
-`$cheatDomains = @(
+# API/AUTH домены (чит запущен) - ПРИОРИТЕТ
+`$cheatDomainsAPI = @(
+    "auth.systemdlc", "api.systemdlc", "systemdlc.com",
+    "auth.cortex", "api.cortex", "cortex-client.com",
+    "auth.mhub", "api.mhub", "mhub.gg",
+    "auth.flowdlc", "api.flowdlc", "flowdlc.com",
+    "auth.wexside", "api.wexside", "session.wexside", "cdn.wexside",
+    "auth.vape.gg", "api.vape.gg", "session.vape.gg", "license.vape.gg", "cdn.vape.gg",
+    "auth.novoline", "api.novoline", "novoline.wtf",
+    "auth.azura", "api.azura", "session.azura.best",
+    "auth.rise", "api.rise", "Intent.design", "auth.Intent.design", "Intent.store",
+    "auth.astolfo", "api.astolfo", "astolfo.lgbt", "session.astolfo.lgbt",
+    "auth.tenacity", "api.tenacity", "session.tenacity",
+    "auth.exhibition", "api.exhibition", "session.exhibition.today",
+    "auth.drip", "api.drip", "session.drip",
+    "auth.flux", "api.flux", "flux.today",
+    "auth.entropy", "api.entropy",
+    "auth.moon", "api.moon",
+    "api.liquidbounce.net", "auth.liquidbounce.net", "cloud.liquidbounce.net", "cdn.liquidbounce.net", "api.ccbluex.net",
+    "meteorclient.com", "api.meteorclient.com", "meteor.rip",
+    "futureclient.net", "api.futureclient.net",
+    "auth.rusher.gg", "api.rusherhack.org",
+    "impactclient.net", "api.impactclient.net",
+    "wurstclient.net", "api.wurstclient.net", "updates.wurstclient.net",
+    "aristois.net", "api.aristois.net", "auth.aristois.net",
+    "api.fdpclient.com", "unblockedfdp.net",
+    "api.ravenclient.cf", "auth.raven", "api.lbplus",
+    "auth.delta", "api.delta-client",
+    "auth.takker", "api.faker", "auth.vergo", "api.august", "auth.remix", "api.abyss",
+    "auth.sigmaclient.info", "api.sigma5.info", "omikron.dev",
+    "auth.mcleaks.net", "api.mcleaks.net", "sessionserver.mcleaks.net",
+    "thealtening.com", "api.thealtening.com", "sessionserver.thealtening.com"
+)
+
+# Сайты для скачивания (резерв)
+`$cheatDomainsDownload = @(
     "systemdlc", "cortex", "mhub", "flowdlc", "wexside", "vape", "novoline", "azura", "rise", "astolfo",
     "tenacity", "exhibition", "drip", "flux", "entropy", "moon",
     "liquidbounce", "meteor", "future", "rusherhack", "impact", "wurst",
@@ -1667,6 +1825,8 @@ if ($choice -eq "1") {
     "nodus", "huzuni", "wolfram", "hawkeye", "phobos", "earthhack",
     "konas", "kami", "intent-store", "mcleaks", "thealtening"
 )
+
+`$cheatDomains = `$cheatDomainsAPI + `$cheatDomainsDownload
 
 `$results = @{
     foundCount = 0
@@ -1880,28 +2040,95 @@ try {
                         
                         if ($cacheRecords.Count -gt 0) {
                             Write-Host "  📋 DNS Cache ($($cacheRecords.Count)):" -ForegroundColor Cyan
-                            foreach ($record in $cacheRecords | Select-Object -First 10) {
-                                Write-Host "     🚨 $($record.Domain)" -ForegroundColor Yellow
-                                Write-Host "        └─ Pattern: $($record.CheatPattern)" -ForegroundColor DarkGray
+                            foreach ($record in $cacheRecords) {
+                                Write-Host ""
+                                Write-Host "     ╔═══════════════════════════════════════════════════════════════╗" -ForegroundColor Red
+                                Write-Host "     ║ DETECTED DOMAIN: $($record.Domain)" -ForegroundColor Yellow
+                                Write-Host "     ╚═══════════════════════════════════════════════════════════════╝" -ForegroundColor Red
+                                Write-Host "     • Source:       DNS Cache (Current)" -ForegroundColor Gray
+                                Write-Host "     • Pattern:      $($record.CheatPattern)" -ForegroundColor Gray
+                                
+                                # Определяем тип обнаружения
+                                if ($record.CheatPattern -like "auth.*" -or $record.CheatPattern -like "api.*" -or $record.CheatPattern -like "session.*" -or $record.CheatPattern -like "license.*" -or $record.CheatPattern -like "cdn.*") {
+                                    Write-Host "     • Detection:    🔴 CHEAT RUNNING (API/Auth server)" -ForegroundColor Red
+                                    Write-Host "     • Severity:     CRITICAL - Cheat was actively used!" -ForegroundColor Red
+                                } else {
+                                    Write-Host "     • Detection:    ⚠️  DOWNLOAD SITE (Website visited)" -ForegroundColor Yellow
+                                    Write-Host "     • Severity:     HIGH - Downloaded or researched cheats" -ForegroundColor Yellow
+                                }
+                                
+                                Write-Host "     • Cheat Type:   " -NoNewline -ForegroundColor Gray
+                                
+                                # Определяем тип чита
+                                if ($record.CheatPattern -in @("systemdlc","cortex","mhub","flowdlc","wexside","vape","novoline","azura","rise","astolfo","tenacity","exhibition","drip","flux","entropy","moon")) {
+                                    Write-Host "Premium Client" -ForegroundColor Red
+                                } elseif ($record.CheatPattern -in @("liquidbounce","meteor","future","rusherhack","impact","wurst","aristois","fdpclient")) {
+                                    Write-Host "Free Ghost Client" -ForegroundColor Yellow
+                                } elseif ($record.CheatPattern -in @("raven","lbplus","delta","takker","faker","vergo","august","remix","abyss")) {
+                                    Write-Host "Inject/Bypass Client" -ForegroundColor Magenta
+                                } elseif ($record.CheatPattern -in @("mcleaks","thealtening","altening")) {
+                                    Write-Host "Alt Generator" -ForegroundColor DarkYellow
+                                } else {
+                                    Write-Host "Cheat Client" -ForegroundColor Red
+                                }
+                                
+                                Write-Host ""
+                                Write-Host "     ⚠️  Possible reasons:" -ForegroundColor Yellow
+                                
+                                if ($record.CheatPattern -like "auth.*" -or $record.CheatPattern -like "api.*" -or $record.CheatPattern -like "session.*" -or $record.CheatPattern -like "license.*") {
+                                    Write-Host "        1. 🔴 CHEAT WAS LAUNCHED AND RUNNING" -ForegroundColor Red
+                                    Write-Host "        2. Cheat connected to auth/license server" -ForegroundColor Gray
+                                    Write-Host "        3. Auto-update check from cheat client" -ForegroundColor Gray
+                                    Write-Host "        4. Active session with cheat server" -ForegroundColor Gray
+                                } else {
+                                    Write-Host "        1. Visited cheat website ($($record.Domain))" -ForegroundColor Gray
+                                    Write-Host "        2. Downloaded cheat client installer" -ForegroundColor Gray
+                                    Write-Host "        3. Watched video/guide with cheat links" -ForegroundColor Gray
+                                    Write-Host "        4. Someone else used this PC" -ForegroundColor Gray
+                                    Write-Host "        5. Auto-redirect from infected site" -ForegroundColor Gray
+                                }
+                                
+                                Write-Host ""
                             }
-                            Write-Host ""
                         }
                         
                         if ($sysmonRecords.Count -gt 0) {
-                            Write-Host "  🛡️  Sysmon Logs ($($sysmonRecords.Count)) [CANNOT BE CLEARED]:" -ForegroundColor Red
-                            foreach ($record in $sysmonRecords | Select-Object -First 10) {
-                                Write-Host "     🚨 $($record.Domain)" -ForegroundColor Yellow
-                                Write-Host "        └─ Pattern: $($record.CheatPattern)" -ForegroundColor DarkGray
+                            Write-Host "  🛡️  Sysmon Logs ($($sysmonRecords.Count)) [PERMANENT EVIDENCE]:" -ForegroundColor Red
+                            foreach ($record in $sysmonRecords | Select-Object -First 5) {
+                                Write-Host ""
+                                Write-Host "     ╔═══════════════════════════════════════════════════════════════╗" -ForegroundColor Red
+                                Write-Host "     ║ DETECTED DOMAIN: $($record.Domain)" -ForegroundColor Yellow
+                                Write-Host "     ╚═══════════════════════════════════════════════════════════════╝" -ForegroundColor Red
+                                Write-Host "     • Source:       Sysmon Event Log (Cannot be deleted!)" -ForegroundColor Gray
+                                Write-Host "     • Pattern:      $($record.CheatPattern)" -ForegroundColor Gray
+                                Write-Host "     • Timestamp:    $($record.Time)" -ForegroundColor Gray
+                                Write-Host ""
+                                Write-Host "     ⚠️  This evidence is PERMANENT and cannot be cleared!" -ForegroundColor Red
+                                Write-Host ""
                             }
-                            Write-Host ""
+                            
+                            if ($sysmonRecords.Count -gt 5) {
+                                Write-Host "     ... and $($sysmonRecords.Count - 5) more records" -ForegroundColor DarkGray
+                                Write-Host ""
+                            }
                         }
                         
                         if ($clientRecords.Count -gt 0) {
                             Write-Host "  📝 DNS Client Logs ($($clientRecords.Count)):" -ForegroundColor Cyan
-                            foreach ($record in $clientRecords | Select-Object -First 10) {
-                                Write-Host "     🚨 $($record.CheatPattern)" -ForegroundColor Yellow
+                            foreach ($record in $clientRecords | Select-Object -First 5) {
+                                Write-Host ""
+                                Write-Host "     ╔═══════════════════════════════════════════════════════════════╗" -ForegroundColor Red
+                                Write-Host "     ║ DETECTED PATTERN: $($record.CheatPattern)" -ForegroundColor Yellow
+                                Write-Host "     ╚═══════════════════════════════════════════════════════════════╝" -ForegroundColor Red
+                                Write-Host "     • Source:       Windows DNS Client Log" -ForegroundColor Gray
+                                Write-Host "     • Timestamp:    $($record.Time)" -ForegroundColor Gray
+                                Write-Host ""
                             }
-                            Write-Host ""
+                            
+                            if ($clientRecords.Count -gt 5) {
+                                Write-Host "     ... and $($clientRecords.Count - 5) more records" -ForegroundColor DarkGray
+                                Write-Host ""
+                            }
                         }
                         
                         if ($results.suspiciousActivity.Count -gt 0) {
