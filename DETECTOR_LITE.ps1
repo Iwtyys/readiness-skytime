@@ -1526,6 +1526,9 @@ if ($choice -eq "1") {
     $cheatDomains = @(
         # Premium читы
         "systemdlc",
+        "cortex",
+        "mhub",
+        "flowdlc",
         "wexside",
         "wexside.net",
         "vape.gg",
@@ -1656,7 +1659,7 @@ if ($choice -eq "1") {
             
             $scriptContent = @"
 `$cheatDomains = @(
-    "systemdlc", "wexside", "vape", "novoline", "azura", "rise", "astolfo",
+    "systemdlc", "cortex", "mhub", "flowdlc", "wexside", "vape", "novoline", "azura", "rise", "astolfo",
     "tenacity", "exhibition", "drip", "flux", "entropy", "moon",
     "liquidbounce", "meteor", "future", "rusherhack", "impact", "wurst",
     "aristois", "fdpclient", "raven", "lbplus", "delta", "takker", "faker",
