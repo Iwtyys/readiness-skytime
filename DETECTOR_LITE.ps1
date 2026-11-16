@@ -1668,36 +1668,43 @@ if ($choice -eq "1") {
     "konas", "kami", "intent-store", "mcleaks", "thealtening"
 )
 
-Write-Host ""
-Write-Host "  [~] Reading DNS cache with elevated privileges..." -ForegroundColor Cyan
-`$dnsCache = ipconfig /displaydns 2>`$null | Out-String
-
-if ([string]::IsNullOrWhiteSpace(`$dnsCache)) {
-    Write-Host "  [!] DNS cache is empty" -ForegroundColor Yellow
-    Read-Host "`nPress Enter to continue"
-    exit
+`$results = @{
+    foundCount = 0
+    records = @()
+    totalPatterns = `$cheatDomains.Count
+    sysmonFound = `$false
+    sysmonRecords = @()
+    dnsClientFound = `$false
+    dnsClientRecords = @()
+    clearAttempts = `$false
+    suspiciousActivity = @()
 }
 
+# === УРОВЕНЬ 1: DNS CACHE ===
+`$dnsCache = ipconfig /displaydns 2>`$null | Out-String
 `$foundDomains = @()
 `$suspiciousRecords = @()
 
-`$lines = `$dnsCache -split "``n"
-`$currentRecord = ""
-
-foreach (`$line in `$lines) {
-    `$line = `$line.Trim()
+if (-not [string]::IsNullOrWhiteSpace(`$dnsCache)) {
+    `$lines = `$dnsCache -split "``n"
+    `$currentRecord = ""
     
-    if (`$line -like "Record Name*" -or `$line -like "Имя записи*") {
-        `$currentRecord = `$line -replace "^.*:\s*", ""
-        `$currentRecord = `$currentRecord.Trim()
+    foreach (`$line in `$lines) {
+        `$line = `$line.Trim()
         
-        foreach (`$cheatDomain in `$cheatDomains) {
-            if (`$currentRecord -like "*`$cheatDomain*") {
-                if (`$currentRecord -notin `$foundDomains) {
-                    `$foundDomains += `$currentRecord
-                    `$suspiciousRecords += [PSCustomObject]@{
-                        Domain = `$currentRecord
-                        CheatPattern = `$cheatDomain
+        if (`$line -like "Record Name*" -or `$line -like "Имя записи*") {
+            `$currentRecord = `$line -replace "^.*:\s*", ""
+            `$currentRecord = `$currentRecord.Trim()
+            
+            foreach (`$cheatDomain in `$cheatDomains) {
+                if (`$currentRecord -like "*`$cheatDomain*") {
+                    if (`$currentRecord -notin `$foundDomains) {
+                        `$foundDomains += `$currentRecord
+                        `$suspiciousRecords += [PSCustomObject]@{
+                            Domain = `$currentRecord
+                            CheatPattern = `$cheatDomain
+                            Source = "DNS Cache"
+                        }
                     }
                 }
             }
@@ -1705,43 +1712,103 @@ foreach (`$line in `$lines) {
     }
 }
 
-Write-Host "  [✓] DNS cache analyzed" -ForegroundColor Green
-Write-Host ""
+# === УРОВЕНЬ 2: SYSMON LOGS (Event ID 22) ===
+try {
+    if (Get-WinEvent -ListLog "Microsoft-Windows-Sysmon/Operational" -ErrorAction SilentlyContinue) {
+        `$results.sysmonFound = `$true
+        
+        `$sysmonEvents = Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-Sysmon/Operational'; Id=22} -MaxEvents 10000 -ErrorAction SilentlyContinue
+        
+        foreach (`$event in `$sysmonEvents) {
+            `$xml = [xml]`$event.ToXml()
+            `$queryName = (`$xml.Event.EventData.Data | Where-Object {`$_.Name -eq 'QueryName'}).'#text'
+            
+            if (`$queryName) {
+                foreach (`$cheatDomain in `$cheatDomains) {
+                    if (`$queryName -like "*`$cheatDomain*") {
+                        `$results.sysmonRecords += [PSCustomObject]@{
+                            Domain = `$queryName
+                            CheatPattern = `$cheatDomain
+                            Source = "Sysmon"
+                            Time = `$event.TimeCreated
+                        }
+                        break
+                    }
+                }
+            }
+        }
+    }
+} catch {}
 
-if (`$foundDomains.Count -gt 0) {
-    Write-Host "  ┌─────────────────────────────────────────────────────────────────────┐" -ForegroundColor Red
-    Write-Host "  │                    ⚠️  CHEAT DOMAINS DETECTED                       │" -ForegroundColor Red
-    Write-Host "  └─────────────────────────────────────────────────────────────────────┘" -ForegroundColor Red
-    Write-Host ""
-    Write-Host "  Found `$(`$foundDomains.Count) suspicious domain(s) in DNS cache:" -ForegroundColor Red
-    Write-Host ""
+# === УРОВЕНЬ 3: WINDOWS DNS CLIENT LOGS ===
+try {
+    `$dnsClientEvents = Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-DNS-Client/Operational'} -MaxEvents 5000 -ErrorAction SilentlyContinue
     
-    foreach (`$record in `$suspiciousRecords) {
-        Write-Host "  🚨 " -NoNewline -ForegroundColor Red
-        Write-Host "`$(`$record.Domain)" -ForegroundColor Yellow
-        Write-Host "     └─ Pattern: `$(`$record.CheatPattern)" -ForegroundColor DarkGray
+    if (`$dnsClientEvents) {
+        `$results.dnsClientFound = `$true
+        
+        foreach (`$event in `$dnsClientEvents) {
+            `$message = `$event.Message
+            
+            foreach (`$cheatDomain in `$cheatDomains) {
+                if (`$message -like "*`$cheatDomain*") {
+                    `$results.dnsClientRecords += [PSCustomObject]@{
+                        Domain = `$cheatDomain
+                        CheatPattern = `$cheatDomain
+                        Source = "DNS Client Log"
+                        Time = `$event.TimeCreated
+                    }
+                    break
+                }
+            }
+        }
+    }
+} catch {}
+
+# === УРОВЕНЬ 4: ДЕТЕКТ ОЧИСТКИ DNS ===
+try {
+    # Проверяем Security логи на команды очистки DNS
+    `$securityEvents = Get-WinEvent -FilterHashtable @{LogName='Security'; Id=4688} -MaxEvents 1000 -ErrorAction SilentlyContinue | Where-Object {
+        `$_.Message -like "*ipconfig*flushdns*" -or
+        `$_.Message -like "*Clear-DnsClientCache*" -or
+        `$_.Message -like "*wevtutil*cl*DNS*"
     }
     
-    Write-Host ""
-    Write-Host "  ╔═══════════════════════════════════════════════════════════════════╗" -ForegroundColor Red
-    Write-Host "  ║                      VERDICT: BAN                                  ║" -ForegroundColor Red  
-    Write-Host "  ║  Player has accessed known cheat client domains                   ║" -ForegroundColor Red
-    Write-Host "  ╚═══════════════════════════════════════════════════════════════════╝" -ForegroundColor Red
-    
-} else {
-    Write-Host "  ┌─────────────────────────────────────────────────────────────────────┐" -ForegroundColor Green
-    Write-Host "  │                       ✓ DNS CACHE CLEAN                             │" -ForegroundColor Green
-    Write-Host "  └─────────────────────────────────────────────────────────────────────┘" -ForegroundColor Green
-    Write-Host ""
-    Write-Host "  No known cheat domains found in DNS cache" -ForegroundColor Green
-    Write-Host ""
-    Write-Host "  Scanned `$(`$cheatDomains.Count) cheat patterns" -ForegroundColor DarkGray
-}
+    if (`$securityEvents) {
+        `$results.clearAttempts = `$true
+        foreach (`$event in `$securityEvents) {
+            `$results.suspiciousActivity += "DNS cache cleared at `$(`$event.TimeCreated)"
+        }
+    }
+} catch {}
 
-Write-Host ""
-Write-Host "  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
-Write-Host ""
-Read-Host "Press Enter to continue"
+# === УРОВЕНЬ 5: ПРОВЕРКА HOSTS FILE ===
+try {
+    `$hostsFile = Get-Content "C:\Windows\System32\drivers\etc\hosts" -ErrorAction SilentlyContinue
+    foreach (`$line in `$hostsFile) {
+        if (`$line -notlike "#*" -and -not [string]::IsNullOrWhiteSpace(`$line)) {
+            foreach (`$cheatDomain in `$cheatDomains) {
+                if (`$line -like "*`$cheatDomain*") {
+                    `$results.suspiciousActivity += "HOSTS file redirect: `$line"
+                }
+            }
+        }
+    }
+} catch {}
+
+# Объединяем все найденные записи
+`$allRecords = @()
+`$allRecords += `$suspiciousRecords
+`$allRecords += `$results.sysmonRecords | Select-Object Domain, CheatPattern, Source
+`$allRecords += `$results.dnsClientRecords | Select-Object Domain, CheatPattern, Source
+
+# Уникальные домены
+`$uniqueDomains = `$allRecords | Select-Object -ExpandProperty Domain -Unique
+`$results.foundCount = `$uniqueDomains.Count
+`$results.records = `$allRecords
+
+# Сохраняем результаты
+`$results | ConvertTo-Json -Depth 10 | Out-File -FilePath '$resultFile' -Encoding UTF8
 "@
             
             Set-Content -Path $tempScript -Value $scriptContent -Encoding UTF8
@@ -1773,7 +1840,29 @@ Read-Host "Press Enter to continue"
                 if (Test-Path $resultFile) {
                     $results = Get-Content $resultFile -Raw | ConvertFrom-Json
                     
-                    Write-Host "  [✓] DNS cache analyzed" -ForegroundColor Green
+                    Write-Host "  [✓] Multi-layer scan completed" -ForegroundColor Green
+                    Write-Host ""
+                    
+                    # Показываем защиту
+                    Write-Host "  ═══ ANTI-BYPASS PROTECTION ═══" -ForegroundColor Cyan
+                    Write-Host "  [~] DNS Cache:      CHECKED" -ForegroundColor Gray
+                    
+                    if ($results.sysmonFound) {
+                        Write-Host "  [✓] Sysmon Logs:    ACTIVE (Cannot be bypassed!)" -ForegroundColor Green
+                    } else {
+                        Write-Host "  [!] Sysmon Logs:    NOT INSTALLED" -ForegroundColor Yellow
+                    }
+                    
+                    if ($results.dnsClientFound) {
+                        Write-Host "  [✓] DNS Client Log: ACTIVE" -ForegroundColor Green
+                    } else {
+                        Write-Host "  [!] DNS Client Log: DISABLED" -ForegroundColor Yellow
+                    }
+                    
+                    if ($results.clearAttempts) {
+                        Write-Host "  [⚠] Clear Attempts: DETECTED" -ForegroundColor Red
+                    }
+                    
                     Write-Host ""
                     
                     if ($results.foundCount -gt 0) {
@@ -1781,27 +1870,78 @@ Read-Host "Press Enter to continue"
                         Write-Host "  │                    ⚠️  CHEAT DOMAINS DETECTED                       │" -ForegroundColor Red
                         Write-Host "  └─────────────────────────────────────────────────────────────────────┘" -ForegroundColor Red
                         Write-Host ""
-                        Write-Host "  Found $($results.foundCount) suspicious domain(s) in DNS cache:" -ForegroundColor Red
+                        Write-Host "  Found $($results.foundCount) suspicious domain(s):" -ForegroundColor Red
                         Write-Host ""
                         
-                        foreach ($record in $results.records) {
-                            Write-Host "  🚨 " -NoNewline -ForegroundColor Red
-                            Write-Host "$($record.Domain)" -ForegroundColor Yellow
-                            Write-Host "     └─ Pattern: $($record.CheatPattern)" -ForegroundColor DarkGray
+                        # Группируем по источникам
+                        $cacheRecords = $results.records | Where-Object { $_.Source -eq "DNS Cache" }
+                        $sysmonRecords = $results.records | Where-Object { $_.Source -eq "Sysmon" }
+                        $clientRecords = $results.records | Where-Object { $_.Source -eq "DNS Client Log" }
+                        
+                        if ($cacheRecords.Count -gt 0) {
+                            Write-Host "  📋 DNS Cache ($($cacheRecords.Count)):" -ForegroundColor Cyan
+                            foreach ($record in $cacheRecords | Select-Object -First 10) {
+                                Write-Host "     🚨 $($record.Domain)" -ForegroundColor Yellow
+                                Write-Host "        └─ Pattern: $($record.CheatPattern)" -ForegroundColor DarkGray
+                            }
+                            Write-Host ""
                         }
                         
-                        Write-Host ""
+                        if ($sysmonRecords.Count -gt 0) {
+                            Write-Host "  🛡️  Sysmon Logs ($($sysmonRecords.Count)) [CANNOT BE CLEARED]:" -ForegroundColor Red
+                            foreach ($record in $sysmonRecords | Select-Object -First 10) {
+                                Write-Host "     🚨 $($record.Domain)" -ForegroundColor Yellow
+                                Write-Host "        └─ Pattern: $($record.CheatPattern)" -ForegroundColor DarkGray
+                            }
+                            Write-Host ""
+                        }
+                        
+                        if ($clientRecords.Count -gt 0) {
+                            Write-Host "  📝 DNS Client Logs ($($clientRecords.Count)):" -ForegroundColor Cyan
+                            foreach ($record in $clientRecords | Select-Object -First 10) {
+                                Write-Host "     🚨 $($record.CheatPattern)" -ForegroundColor Yellow
+                            }
+                            Write-Host ""
+                        }
+                        
+                        if ($results.suspiciousActivity.Count -gt 0) {
+                            Write-Host "  ⚠️  Suspicious Activity:" -ForegroundColor Red
+                            foreach ($activity in $results.suspiciousActivity) {
+                                Write-Host "     • $activity" -ForegroundColor Yellow
+                            }
+                            Write-Host ""
+                        }
+                        
                         Write-Host "  ╔═══════════════════════════════════════════════════════════════════╗" -ForegroundColor Red
                         Write-Host "  ║                      VERDICT: BAN                                  ║" -ForegroundColor Red  
                         Write-Host "  ║  Player has accessed known cheat client domains                   ║" -ForegroundColor Red
+                        
+                        if ($results.sysmonFound -and $sysmonRecords.Count -gt 0) {
+                            Write-Host "  ║  Evidence preserved in Sysmon - CANNOT BE DELETED                 ║" -ForegroundColor Red
+                        }
+                        
+                        if ($results.clearAttempts) {
+                            Write-Host "  ║  DNS clear attempts detected - EXTRA SUSPICIOUS                   ║" -ForegroundColor Red
+                        }
+                        
                         Write-Host "  ╚═══════════════════════════════════════════════════════════════════╝" -ForegroundColor Red
                         
                     } else {
                         Write-Host "  ┌─────────────────────────────────────────────────────────────────────┐" -ForegroundColor Green
-                        Write-Host "  │                       ✓ DNS CACHE CLEAN                             │" -ForegroundColor Green
+                        Write-Host "  │                       ✓ ALL SOURCES CLEAN                           │" -ForegroundColor Green
                         Write-Host "  └─────────────────────────────────────────────────────────────────────┘" -ForegroundColor Green
                         Write-Host ""
-                        Write-Host "  No known cheat domains found in DNS cache" -ForegroundColor Green
+                        Write-Host "  No known cheat domains found in:" -ForegroundColor Green
+                        Write-Host "  • DNS Cache" -ForegroundColor Gray
+                        
+                        if ($results.sysmonFound) {
+                            Write-Host "  • Sysmon Logs (10000 events checked)" -ForegroundColor Gray
+                        }
+                        
+                        if ($results.dnsClientFound) {
+                            Write-Host "  • DNS Client Logs (5000 events checked)" -ForegroundColor Gray
+                        }
+                        
                         Write-Host ""
                         Write-Host "  Scanned $($results.totalPatterns) cheat patterns" -ForegroundColor DarkGray
                     }
