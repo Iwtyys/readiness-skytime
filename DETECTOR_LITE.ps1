@@ -271,6 +271,7 @@ while ($true) {
     Write-Host "  [1] Browser History Scanner" -ForegroundColor White
     Write-Host "  [2] Mods Analyzer" -ForegroundColor White
     Write-Host "  [3] Tools Launcher" -ForegroundColor White
+    Write-Host "  [4] DNS Cache Scanner" -ForegroundColor White
     Write-Host ""
     Write-Host "  [0] Exit" -ForegroundColor DarkGray
     Write-Host ""
@@ -1507,6 +1508,344 @@ if ($choice -eq "1") {
         Clear-Host
         Show-Logo
     }
+    
+} elseif ($choice -eq "4") {
+    # DNS Cache Scanner
+    Clear-Host
+    Show-Logo
+    
+    Write-Host "  ╔═════════════════════════════════════════════════════════════════════════╗" -ForegroundColor Gray
+    Write-Host "  ║                        DNS CACHE SCANNER                                ║" -ForegroundColor Gray
+    Write-Host "  ╚═════════════════════════════════════════════════════════════════════════╝" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "  [~] Analyzing DNS cache for cheat domains..." -ForegroundColor Cyan
+    Write-Host "  [!] This requires administrator privileges" -ForegroundColor Yellow
+    Write-Host ""
+    
+    # Список читерских доменов для Minecraft (1.21+)
+    $cheatDomains = @(
+        # Premium читы
+        "systemdlc",
+        "wexside",
+        "wexside.net",
+        "vape.gg",
+        "vape",
+        "vapev4",
+        "vape-lite",
+        "novoline",
+        "novo",
+        "azura",
+        "azura.best",
+        "rise-client",
+        "rise.Intent",
+        "Intent.design",
+        "astolfo",
+        "astolfo.lgbt",
+        "tenacity",
+        "tenacity-client",
+        "exhibition",
+        "exhibition.today",
+        "drip",
+        "drip-lite",
+        "flux",
+        "flux.today",
+        "entropy",
+        "moon",
+        "moon-client",
+        
+        # Популярные бесплатные
+        "liquidbounce",
+        "liquidbounce.net",
+        "ccbluex",
+        "meteor-client",
+        "meteor.rip",
+        "meteorclient",
+        "future-client",
+        "future",
+        "futureclient",
+        "rusherhack",
+        "rusher",
+        "impact",
+        "impactclient",
+        "wurst-client",
+        "wurst",
+        "wurstclient",
+        "aristois",
+        "aristois.net",
+        "fdpclient",
+        "fdp",
+        "unblockedfdp",
+        
+        # Inject/Ghost клиенты
+        "raven",
+        "ravenb+",
+        "ravenbplus",
+        "lbplus",
+        "lb+",
+        "delta",
+        "delta-client",
+        "takker",
+        "faker",
+        "faker-client",
+        "vergo",
+        "august",
+        "remix",
+        "abyss",
+        
+        # Sigma варианты
+        "sigma",
+        "sigma5",
+        "sigmaclient",
+        "omikron",
+        
+        # Старые но актуальные
+        "xatz",
+        "killaura",
+        "nodus",
+        "huzuni",
+        "wolfram",
+        "wolfram-client",
+        "hawkeye",
+        "reach",
+        "bhop",
+        "aimbot",
+        "freecam",
+        "fly",
+        
+        # Китайские читы
+        "sigma-cn",
+        "sakura",
+        "sakura-client",
+        "salhack",
+        "phobos",
+        "3arthh4ck",
+        "earthhack",
+        "konas",
+        "kami",
+        "kamib",
+        "kamiblue",
+        
+        # Дополнительные домены
+        "cheating.com",
+        "hackforums",
+        "intent-store",
+        "intent-api",
+        "intent.store",
+        "buycheats",
+        "minecrafthacks",
+        "mc-hacks",
+        "mcleaks",
+        "thealtening",
+        "altening"
+    )
+    
+    try {
+        # Получаем DNS cache через ipconfig
+        Write-Host "  [~] Reading DNS cache..." -ForegroundColor Gray
+        
+        # Проверяем права администратора
+        $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+        
+        if (-not $isAdmin) {
+            Write-Host "  [!] Administrator privileges required for DNS cache access" -ForegroundColor Yellow
+            Write-Host "  [~] Attempting to elevate..." -ForegroundColor Gray
+            Write-Host ""
+            
+            # Создаём временный скрипт для запуска с правами админа
+            $tempScript = Join-Path $env:TEMP "dns_scanner_temp.ps1"
+            
+            $scriptContent = @"
+`$cheatDomains = @(
+    "systemdlc", "wexside", "vape", "novoline", "azura", "rise", "astolfo",
+    "tenacity", "exhibition", "drip", "flux", "entropy", "moon",
+    "liquidbounce", "meteor", "future", "rusherhack", "impact", "wurst",
+    "aristois", "fdpclient", "raven", "lbplus", "delta", "takker", "faker",
+    "vergo", "august", "remix", "abyss", "sigma", "xatz", "killaura",
+    "nodus", "huzuni", "wolfram", "hawkeye", "phobos", "earthhack",
+    "konas", "kami", "intent-store", "mcleaks", "thealtening"
+)
+
+Write-Host ""
+Write-Host "  [~] Reading DNS cache with elevated privileges..." -ForegroundColor Cyan
+`$dnsCache = ipconfig /displaydns 2>`$null | Out-String
+
+if ([string]::IsNullOrWhiteSpace(`$dnsCache)) {
+    Write-Host "  [!] DNS cache is empty" -ForegroundColor Yellow
+    Read-Host "`nPress Enter to continue"
+    exit
+}
+
+`$foundDomains = @()
+`$suspiciousRecords = @()
+
+`$lines = `$dnsCache -split "``n"
+`$currentRecord = ""
+
+foreach (`$line in `$lines) {
+    `$line = `$line.Trim()
+    
+    if (`$line -like "Record Name*" -or `$line -like "Имя записи*") {
+        `$currentRecord = `$line -replace "^.*:\s*", ""
+        `$currentRecord = `$currentRecord.Trim()
+        
+        foreach (`$cheatDomain in `$cheatDomains) {
+            if (`$currentRecord -like "*`$cheatDomain*") {
+                if (`$currentRecord -notin `$foundDomains) {
+                    `$foundDomains += `$currentRecord
+                    `$suspiciousRecords += [PSCustomObject]@{
+                        Domain = `$currentRecord
+                        CheatPattern = `$cheatDomain
+                    }
+                }
+            }
+        }
+    }
+}
+
+Write-Host "  [✓] DNS cache analyzed" -ForegroundColor Green
+Write-Host ""
+
+if (`$foundDomains.Count -gt 0) {
+    Write-Host "  ┌─────────────────────────────────────────────────────────────────────┐" -ForegroundColor Red
+    Write-Host "  │                    ⚠️  CHEAT DOMAINS DETECTED                       │" -ForegroundColor Red
+    Write-Host "  └─────────────────────────────────────────────────────────────────────┘" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "  Found `$(`$foundDomains.Count) suspicious domain(s) in DNS cache:" -ForegroundColor Red
+    Write-Host ""
+    
+    foreach (`$record in `$suspiciousRecords) {
+        Write-Host "  🚨 " -NoNewline -ForegroundColor Red
+        Write-Host "`$(`$record.Domain)" -ForegroundColor Yellow
+        Write-Host "     └─ Pattern: `$(`$record.CheatPattern)" -ForegroundColor DarkGray
+    }
+    
+    Write-Host ""
+    Write-Host "  ╔═══════════════════════════════════════════════════════════════════╗" -ForegroundColor Red
+    Write-Host "  ║                      VERDICT: BAN                                  ║" -ForegroundColor Red  
+    Write-Host "  ║  Player has accessed known cheat client domains                   ║" -ForegroundColor Red
+    Write-Host "  ╚═══════════════════════════════════════════════════════════════════╝" -ForegroundColor Red
+    
+} else {
+    Write-Host "  ┌─────────────────────────────────────────────────────────────────────┐" -ForegroundColor Green
+    Write-Host "  │                       ✓ DNS CACHE CLEAN                             │" -ForegroundColor Green
+    Write-Host "  └─────────────────────────────────────────────────────────────────────┘" -ForegroundColor Green
+    Write-Host ""
+    Write-Host "  No known cheat domains found in DNS cache" -ForegroundColor Green
+    Write-Host ""
+    Write-Host "  Scanned `$(`$cheatDomains.Count) cheat patterns" -ForegroundColor DarkGray
+}
+
+Write-Host ""
+Write-Host "  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
+Write-Host ""
+Read-Host "Press Enter to continue"
+"@
+            
+            Set-Content -Path $tempScript -Value $scriptContent -Encoding UTF8
+            
+            # Запускаем с правами администратора
+            try {
+                Start-Process powershell -ArgumentList "-ExecutionPolicy Bypass -NoProfile -File `"$tempScript`"" -Verb RunAs -Wait
+                
+                # Удаляем временный файл
+                Remove-Item $tempScript -Force -ErrorAction SilentlyContinue
+                
+            } catch {
+                Write-Host "  [✗] Failed to elevate: $_" -ForegroundColor Red
+                Write-Host ""
+                Write-Host "  Please run the script as Administrator to use DNS Cache Scanner" -ForegroundColor Yellow
+            }
+            
+            Clear-Host
+            Show-Logo
+            continue
+        }
+        
+        # Если уже админ - выполняем напрямую
+        $dnsCache = ipconfig /displaydns 2>$null | Out-String
+        
+        if ([string]::IsNullOrWhiteSpace($dnsCache)) {
+            Write-Host "  [!] DNS cache is empty or inaccessible" -ForegroundColor Yellow
+            Write-Host ""
+            Read-Host "Press Enter to continue"
+            Clear-Host
+            Show-Logo
+            continue
+        }
+        
+        $foundDomains = @()
+        $suspiciousRecords = @()
+        
+        # Парсим DNS кэш построчно
+        $lines = $dnsCache -split "`n"
+        $currentRecord = ""
+        
+        foreach ($line in $lines) {
+            $line = $line.Trim()
+            
+            # Начало новой записи
+            if ($line -like "Record Name*" -or $line -like "Имя записи*") {
+                $currentRecord = $line -replace "^.*:\s*", ""
+                $currentRecord = $currentRecord.Trim()
+                
+                # Проверяем на совпадение с читерскими доменами
+                foreach ($cheatDomain in $cheatDomains) {
+                    if ($currentRecord -like "*$cheatDomain*") {
+                        if ($currentRecord -notin $foundDomains) {
+                            $foundDomains += $currentRecord
+                            $suspiciousRecords += [PSCustomObject]@{
+                                Domain = $currentRecord
+                                CheatPattern = $cheatDomain
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        Write-Host "  [✓] DNS cache analyzed" -ForegroundColor Green
+        Write-Host ""
+        
+        if ($foundDomains.Count -gt 0) {
+            Write-Host "  ┌─────────────────────────────────────────────────────────────────────┐" -ForegroundColor Red
+            Write-Host "  │                    ⚠️  CHEAT DOMAINS DETECTED                       │" -ForegroundColor Red
+            Write-Host "  └─────────────────────────────────────────────────────────────────────┘" -ForegroundColor Red
+            Write-Host ""
+            Write-Host "  Found $($foundDomains.Count) suspicious domain(s) in DNS cache:" -ForegroundColor Red
+            Write-Host ""
+            
+            foreach ($record in $suspiciousRecords) {
+                Write-Host "  🚨 " -NoNewline -ForegroundColor Red
+                Write-Host "$($record.Domain)" -ForegroundColor Yellow
+                Write-Host "     └─ Pattern: $($record.CheatPattern)" -ForegroundColor DarkGray
+            }
+            
+            Write-Host ""
+            Write-Host "  ╔═══════════════════════════════════════════════════════════════════╗" -ForegroundColor Red
+            Write-Host "  ║                      VERDICT: BAN                                  ║" -ForegroundColor Red  
+            Write-Host "  ║  Player has accessed known cheat client domains                   ║" -ForegroundColor Red
+            Write-Host "  ╚═══════════════════════════════════════════════════════════════════╝" -ForegroundColor Red
+            
+        } else {
+            Write-Host "  ┌─────────────────────────────────────────────────────────────────────┐" -ForegroundColor Green
+            Write-Host "  │                       ✓ DNS CACHE CLEAN                             │" -ForegroundColor Green
+            Write-Host "  └─────────────────────────────────────────────────────────────────────┘" -ForegroundColor Green
+            Write-Host ""
+            Write-Host "  No known cheat domains found in DNS cache" -ForegroundColor Green
+            Write-Host ""
+            Write-Host "  Scanned $($cheatDomains.Count) cheat patterns" -ForegroundColor DarkGray
+        }
+        
+    } catch {
+        Write-Host "  [✗] Error reading DNS cache: $_" -ForegroundColor Red
+    }
+    
+    Write-Host ""
+    Write-Host "  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
+    Write-Host ""
+    Read-Host "Press Enter to continue"
+    Clear-Host
+    Show-Logo
     
 } elseif ($choice -eq "0") {
     exit
